@@ -859,7 +859,7 @@
       <!-- 순음청력도 -->
       <div class="card audiogram-card">
         <div class="ag-head">
-          <h3><span class="ag-nav"><button id="probPrev" class="ag-arrow" onclick="goProblem(-1)" aria-label="이전 문제" title="이전 문제">‹</button><em id="agProblemNo" class="ag-no" title="현재 문제 번호 (프로그램을 열면 문제 1이 자동 출제)">문제 1</em><button id="probNext" class="ag-arrow" onclick="goProblem(1)" aria-label="다음 문제" title="다음 문제 (이미 출제된 문제만)">›</button></span>순음 청력도 <span id="agHint" title="TE = 검사 귀 · NTE = 비검사 귀 · IA = 이간감쇠">기도 차폐 판단: TE ACT − IA(<span id="agHintIA" style="display:inline; margin:0; font-size:inherit; color:inherit; font-weight:inherit;">Supra-aural earphones 40 dB</span>) ≥ NTE BCT / 골도 차폐 판단: TE ABG ≥ 15</span><b id="symbolCount" style="display:none;">0</b></h3>
+          <h3><span class="ag-nav"><button id="probPrev" class="ag-arrow" onclick="goProblem(-1)" aria-label="이전 문제" title="이전 문제">‹</button><em id="agProblemNo" class="ag-no" title="현재 문제 번호 (프로그램을 열면 문제 1이 자동 출제)">문제 1</em><button id="probNext" class="ag-arrow" onclick="goProblem(1)" aria-label="다음 문제" title="다음 문제 (이미 출제된 문제만)">›</button></span>순음 청력도 <span id="agHint" title="TE = 검사 귀 · NTE = 비검사 귀 · IA = 이간감쇠">기도 차폐 판단: TE ACT − IA(<span id="agHintIA" style="display:inline; margin:0; font-size:inherit; color:inherit; font-weight:inherit;">Supra-aural earphones 40 dB</span>) ≥ NTE BCT (6k·8k: NTE ACT) / 골도 차폐 판단: TE ABG ≥ 15</span><b id="symbolCount" style="display:none;">0</b></h3>
           <button onclick="clearAllSymbols()" class="ag-clear">전체 지우기</button>
         </div>
         <div class="audiogram-shell">
@@ -910,7 +910,7 @@
           <h4>기입 순서</h4>
           <ol>
             <li>양 귀 <b>비차폐 기도</b>(O·X) → <b>비차폐 골도</b>(&lt; &gt;, 좋은 쪽 귀 값)</li>
-            <li>차폐 필요 판단 — AC: <b>TE ACT − IA ≥ NTE BCT</b> · BC: <b>TE ABG ≥ 15</b> (8 kHz 골도 제외)</li>
+            <li>차폐 필요 판단 — AC: <b>TE ACT − IA ≥ NTE BCT</b> (6·8 kHz는 <b>NTE ACT</b>) · BC: <b>TE ABG ≥ 15</b> (8 kHz 골도 제외)</li>
             <li>초기 차폐음 — AC: <b>NTE ACT + 10</b> 또는 <b>TE ACT − IA + 10</b> · BC: <b>NTE ACT + 10 + OE</b></li>
             <li>plateau method — 톤은 비차폐 역치에서 시작, 반응하면 차폐음 ↑, 무반응이면 톤 5 dB ↑. <b>5 dB씩 연속 4회</b> 또는 <b>10 dB씩 연속 3회</b> 반응 시 종료 → 연속 반응이 시작된 차폐음 ~ 마지막 차폐음</li>
             <li>차폐 후 역치(△ □ [ ])는 청력도에, <b>차폐음 범위는 NTE 칸</b>에 기입</li>
@@ -948,7 +948,8 @@
     const INTER_NEIGHBORS = { 750:[500,1000], 1500:[1000,2000], 3000:[2000,4000], 6000:[4000,8000] };   // 사이주파수 양옆 옥타브
     const INTER_GAP = 20;                                                          // 양옆 옥타브 AC 역치 차 ≥ 20 dB 이면 사이주파수 검사 필요
     const isInter = f => interList.includes(f);
-    const boneOK  = f => f !== 8000 && !isInter(f);                                // 골도는 주 주파수(8000 제외)만 검사
+    const boneOK  = f => f !== 8000 && !isInter(f);   // 골도는 주 주파수(8000 제외)만 검사
+    const acOnly  = f => f === 6000 || f === 8000;                                  // 6000·8000Hz: 골도 없음 → 기도 차폐 판단·계산을 AC로만
     const BONE_FALLBACK = { 750:500, 1500:1000, 3000:2000, 6000:4000, 8000:4000 };
     const LEVEL_MIN = -10, LEVEL_MAX = 120, LEVEL_RANGE = LEVEL_MAX - LEVEL_MIN;
     const FREQ_X = { 250:80, 500:150, 750:191, 1000:220, 1500:261, 2000:290, 3000:331, 4000:360, 6000:401, 8000:430 };   // 옥타브 간격 균등(70px), 사이주파수는 로그 눈금 위치
@@ -1610,8 +1611,10 @@
       const nte = te === 'RE' ? 'LE' : 'RE';
       const t = CASES[state.currentCase].trueThresholds;
       const IA = getIA();
-      const teAC = t[te].AC[freq], teBC = t[te].BC[freq];
-      const nteAC = t[nte].AC[freq], nteBC = t[nte].BC[freq];
+      const teAC = t[te].AC[freq], nteAC = t[nte].AC[freq];
+      // 6000·8000Hz는 골도를 구하지 않으므로 BC 대신 AC로 비교·계산 (내부 BC 참고값은 사용하지 않음)
+      const teBC = acOnly(freq) ? teAC : t[te].BC[freq];
+      const nteBC = acOnly(freq) ? nteAC : t[nte].BC[freq];
 
       const teUAC  = Math.min(teAC, nteBC + IA);
       const teUBC  = Math.min(teBC, nteBC);
@@ -1633,7 +1636,7 @@
         if (tone >= nteBC) phys = tone + nteABG;
         cands = (nteABG >= 10 && phys > 0) ? [minA, phys] : [minA];
       } else {
-        needed = (teUAC - IA) >= nteUBC;
+        needed = (teUAC - IA) >= (acOnly(freq) ? nteUAC : nteUBC);   // 6k·8k: TE ACT − IA ≥ NTE ACT
         minA = nteUAC + 10;                                     // ② NTE AC + 10
         minB = teUAC - IA + 10;                                 // ③ TE - IA + 10
         const cap = AC_MAX[freq];
@@ -2092,7 +2095,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     // ---------- 기대 정답 계산 ----------
     function expAC(ear, f, masked) {
       const t = CASES[state.currentCase].trueThresholds, other = ear === 'RE' ? 'LE' : 'RE';
-      const v = masked ? t[ear].AC[f] : Math.min(t[ear].AC[f], t[other].BC[f] + getIA());
+      const v = masked ? t[ear].AC[f] : Math.min(t[ear].AC[f], (acOnly(f) ? t[other].AC[f] : t[other].BC[f]) + getIA());
       return (v >= 120 || v > AC_MAX[f]) ? { db: AC_MAX[f], nr: true } : { db: v, nr: false };
     }
     function expBCUnm(f) {
@@ -2197,7 +2200,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         if (!m.needed) {
           if (p.kind === 'empty') return;                        // 불필요한 칸을 비워둠: 점수 대상 아님(정상)
           S.mRng.total++; td.classList.add('bad');
-          S.mRng.fails.push(`${label} — 차폐 불필요(${mode === 'air' ? 'TE ACT − IA &lt; NTE BCT' : 'TE ABG &lt; 15'}) → 빈칸이어야 함`);
+          S.mRng.fails.push(`${label} — 차폐 불필요(${mode === 'air' ? (f === 8000 ? 'TE ACT − IA &lt; NTE ACT' : 'TE ACT − IA &lt; NTE BCT') : 'TE ABG &lt; 15'}) → 빈칸이어야 함`);
           return;
         }
         S.mRng.total++;
