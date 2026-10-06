@@ -1621,7 +1621,7 @@
       const nteUAC = Math.min(nteAC, teBC + IA);
       const nteUBC = Math.min(nteBC, teBC);
       const nteABG = Math.max(0, nteAC - nteBC);      // NTE의 실제 전도성 요소
-      const oe = nteABG < 10 ? getOE(freq) : 0;    // NTE에 전도성 요소가 있으면 OE 없음
+      const oe = nteABG < 15 ? getOE(freq) : 0;    // 교재 기준: NTE ABG ≥ 15(전음성·혼합성)이면 OE 미적용, 건청·SNHL만 OE 적용
 
       const maxEM = teBC + IA;
       const maxCap = maxEM >= 120 ? 120 : maxEM;
@@ -1634,7 +1634,7 @@
         const sig = teBC > cap ? cap : teBC - 5;               // TE 역치 바로 아래(NR이면 최대 출력) 신호
         const tone = sig + oe;
         if (tone >= nteBC) phys = tone + nteABG;
-        cands = (nteABG >= 10 && phys > 0) ? [minA, phys] : [minA];
+        cands = (nteABG >= 15 && phys > 0) ? [minA, phys] : [minA];   // OE 기준과 동일하게 교재 기준(ABG ≥ 15) 적용
       } else {
         needed = (teUAC - IA) >= (acOnly(freq) ? nteUAC : nteUBC);   // 6k·8k: TE ACT − IA ≥ NTE ACT
         minA = nteUAC + 10;                                     // ② NTE AC + 10
