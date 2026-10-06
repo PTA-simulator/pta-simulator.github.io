@@ -267,7 +267,7 @@
     .wk-card .ms-table .ms-corner { font-size:12px; padding-left:7px; }
     .wk-card .dx-calc { font-size:11.5px; line-height:1.55; padding:5px 9px; margin-bottom:7px; }
     .wk-card .dx-table th, .dx-table td { padding:4px 5px; }
-    .wk-card .dx-table td.dx-row { width:15%; font-size:12px; white-space:nowrap; }
+    .wk-card .dx-table td.dx-row { width:24%; font-size:12px; white-space:nowrap; }
     .wk-card .dx-table select { padding:6px 4px; font-size:12px; }
 
     .gr-dock { display:grid; grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr)); gap:7px; padding:9px 12px !important; background:#fbfcfe !important; border-color:#d9e2ee !important; }
@@ -764,6 +764,11 @@
     .gr-bar i { display:block; height:100%; }
     .gr-fails { margin:7px 0 0; padding-left:17px; font-size:11.5px; color:#991b1b; line-height:1.65; }
     .gr-empty { margin-top:6px; font-size:11.5px; color:#15803d; }
+    .gr-split { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+    .gr-split > div + div { border-left:1px dashed #e2e8f0; padding-left:10px; }
+    .gr-col-head { display:flex; justify-content:space-between; gap:6px; margin-top:7px; font-size:11.5px; font-weight:700; color:#475569; }
+    .gr-col-head span { font-family:ui-monospace,Menlo,Consolas,monospace; }
+    .gr-split .gr-fails { padding-left:14px; font-size:11px; margin-top:4px; }
     .gr-notes { margin-top:10px; font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:7px 9px; line-height:1.55; }
 
     @media (max-width: 620px) {
@@ -804,7 +809,7 @@
     <div class="right-column-stack">
       <!-- 채점 -->
       <div class="card gr-dock">
-        <button id="dockBtn-result" onclick="dockClick('result'); this.blur();" class="dock-tab dock-main" title="채점하고 결과 보기 · 다시 누르면 닫기">✅ 전체 채점</button>
+        <button id="dockBtn-result" onclick="dockClick('result'); this.blur();" class="dock-tab dock-main" title="누를 때마다 지금 기입한 내용으로 채점하고 결과 보기">✅ 전체 채점</button>
         <button id="dockBtn-answer" onclick="dockClick('answer'); this.blur();" class="dock-tab" title="정답지 보기 · 청력도에 정답 오버레이 · 다시 누르면 닫기">📖 정답지 보기</button>
         <button id="dockBtn-guide" onclick="dockClick('guide'); this.blur();" class="dock-tab" title="기입법 · 기입 순서 · 진단 기준 · 다시 누르면 닫기">ⓘ 기입 방법</button>
       </div>
@@ -883,7 +888,7 @@
         </div>
         <div id="wkPane-dx" class="wk-pane hidden">
           <table class="dx-table">
-            <thead><tr><th></th><th>난청 유형</th><th>난청 정도</th><th>청력도 형태</th></tr></thead>
+            <thead><tr><th></th><th><span class="color-dot dot-blue"></span>좌측 (Lt)</th><th><span class="color-dot dot-red"></span>우측 (Rt)</th></tr></thead>
             <tbody id="dxBody"></tbody>
           </table>
           <div id="dxCalc" class="dx-calc dx-calc-below"></div>
@@ -896,8 +901,8 @@
     <div id="sidePanel" class="side-panel hidden">
       <div class="sp-head">
         <div class="sp-tabs">
-          <button id="spTab-result" class="sp-tab" onclick="openPanel('result')">✅ 채점 결과</button>
-          <button id="spTab-answer" class="sp-tab" onclick="openPanel('answer')">📖 정답지</button>
+          <button id="spTab-result" class="sp-tab" onclick="gradeAll(); this.blur();" title="누를 때마다 지금 기입한 내용으로 다시 채점">✅ 채점 결과</button>
+          <button id="spTab-answer" class="sp-tab" onclick="gradeAll('answer'); this.blur();">📖 정답지</button>
           <button id="spTab-guide" class="sp-tab" onclick="openPanel('guide')">ⓘ 기입 방법</button>
         </div>
         <button class="sp-close" onclick="closePanel()" title="닫기">✕</button>
@@ -1447,7 +1452,12 @@
       state.showAnswerOverlay = on;
       renderPlottedSymbols();
     }
+    // 채점 색(초록/빨강) 지우기 — 채점 패널을 닫거나 다른 탭으로 가면 호출
+    function clearGradeMarks() {
+      document.querySelectorAll('.ms-table td.ok, .ms-table td.bad, #dxBody td.ok, #dxBody td.bad').forEach(td => td.classList.remove('ok', 'bad'));
+    }
     function openPanel(tab) {
+      if (tab === 'guide') clearGradeMarks();          // 기입 방법 탭만 채점 색을 지움 (정답지는 채점과 같이 색 유지)
       document.getElementById('sidePanel').classList.remove('hidden');
       ['result', 'answer', 'guide'].forEach(t => {
         document.getElementById('spPane-' + t).classList.toggle('hidden', t !== tab);
@@ -1459,6 +1469,7 @@
       syncDock();
     }
     function closePanel() {
+      clearGradeMarks();
       document.getElementById('sidePanel').classList.add('hidden');
       state.panelTab = null;
       setAnswerOverlay(false);
@@ -1467,11 +1478,13 @@
     function toggleCaseDetails() { dockClick('answer'); }
     // 우측 세 버튼: 해당 탭이 열려 있으면 다시 눌러 닫기, 아니면 열기(전체 채점은 채점 후 결과 탭)
     function dockClick(tab) {
+      if (tab === 'result') { gradeAll(); return; }          // 전체 채점: 누를 때마다 다시 채점 (닫기는 패널의 ✕)
       if (state.panelTab === tab) { closePanel(); return; }
-      if (tab === 'result') gradeAll(); else openPanel(tab);
+      if (tab === 'answer') { gradeAll('answer'); return; }   // 정답지 보기도 채점 → 칸 색 표시
+      openPanel(tab);
     }
     const DOCK_LABEL = {
-      result: ['✅ 전체 채점', '✕ 채점 결과 닫기'],
+      result: ['✅ 전체 채점', '🔄 다시 채점'],
       answer: ['📖 정답지 보기', '✕ 정답지 닫기'],
       guide:  ['ⓘ 기입 방법', '✕ 기입 방법 닫기']
     };
@@ -2025,9 +2038,10 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const degOpts = [['정상', '정상 (<20)'], ['경도', '경도 (20–34)'], ['중도', '중도 (35–49)'], ['중고도', '중고도 (50–64)'], ['고도', '고도 (65–79)'], ['심도', '심도 (≥80)']];
       const CFG_SHORT = { normal: '해당없음(정상)', flat: '수평형', gentle: '경사형', ski: '고음급추형', rising: '역경사형', cookie: '접시형', notch: '노치형', corner: '코너형' };
       const cfgOpts = Object.entries(CFG_SHORT);
-      const earRow = (ear, lab) => `<tr><td class="dx-row"><span class="color-dot ${ear === 'RE' ? 'dot-red' : 'dot-blue'}"></span>${lab}</td>` +
-        [['type', typeOpts], ['deg', degOpts], ['cfg', cfgOpts]].map(([k, o]) => `<td id="dx-${k}-${ear}-td">${sel(`dx-${k}-${ear}`, o)}</td>`).join('') + '</tr>';
-      $id('dxBody').innerHTML = earRow('RE', '우측') + earRow('LE', '좌측');
+      // 행 = 유형·정도·형태, 열 = 좌측(왼쪽 칸) · 우측(오른쪽 칸)
+      const dxRow = (k, lab, o) => `<tr><td class="dx-row">${lab}</td>` +
+        ['LE', 'RE'].map(ear => `<td id="dx-${k}-${ear}-td">${sel(`dx-${k}-${ear}`, o)}</td>`).join('') + '</tr>';
+      $id('dxBody').innerHTML = dxRow('type', '난청 유형', typeOpts) + dxRow('deg', '난청 정도', degOpts) + dxRow('cfg', '청력도 형태', cfgOpts);
       document.querySelectorAll('#dxBody select').forEach(el => el.addEventListener('change', () => { el.parentElement.classList.remove('ok', 'bad'); }));
       highlightMaskCell();
       updateDxCalc();
@@ -2069,7 +2083,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       document.querySelectorAll('.ms-table input').forEach(el => { el.value = ''; });
       document.querySelectorAll('.ms-table td.ok, .ms-table td.bad, #dxBody td.ok, #dxBody td.bad').forEach(td => td.classList.remove('ok', 'bad'));
       document.querySelectorAll('#dxBody select').forEach(el => { el.value = ''; });
-      const r = $id('gradeResult'); if (r) r.innerHTML = '<div class="sp-empty">아직 채점하지 않았어요.<br>우측 아래 <b>✅ 전체 채점</b>을 누르면 결과가 여기에 표시됩니다.</div>';
+      const r = $id('gradeResult'); if (r) r.innerHTML = '<div class="sp-empty">아직 채점하지 않았어요.<br>위의 <b>✅ 채점 결과</b> 탭이나 <b>✅ 전체 채점</b> 버튼을 누르면 바로 채점됩니다.</div>';
     }
     function clearAllPlateauPractice() { resetPractice(); }
     // 차폐 범위표(plateau) 입력값과 채점 색 표시만 지움 (청력도 기호·진단·결과는 유지)
@@ -2113,22 +2127,22 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     const rngExample = m => `${m.winLo}-${Math.min(m.winLo + 15, m.winHi)}`;
     function evalRange(m, p) {
       const Lo = m.winLo, Hi = m.winHi, w = Hi - Lo;
-      if (p.kind === 'empty') return { ok: false, msg: `차폐 필요 — 범위 미기입 (plateau 구간 ${winTxt(m)}, 예 ${rngExample(m)})` };
-      if (p.kind === 'dilemma') return { ok: false, msg: `딜레마 아님 — plateau 가능 (구간 ${winTxt(m)}, 예 ${rngExample(m)})` };
-      if (p.kind === 'nr' || p.kind === 'num') return { ok: false, msg: `차폐 후 무반응(NR)이 아님 — 숫자 하나가 아니라 plateau 범위 '최소-최대'를 적어야 함 (구간 ${winTxt(m)}, 예 ${rngExample(m)})` };
-      if (p.kind === 'invalid') return { ok: false, msg: `형식 오류 — '최소-최대' 로 입력 (예 ${rngExample(m)})` };
+      if (p.kind === 'empty') return { ok: false, msg: `범위 미기입` };
+      if (p.kind === 'dilemma') return { ok: false, msg: `오답` };
+      if (p.kind === 'nr' || p.kind === 'num') return { ok: false, msg: `오답` };
+      if (p.kind === 'invalid') return { ok: false, msg: `형식 오류 — '최소-최대' 로 입력 (예 45-60)` };
       const mn = p.a, mx = p.b, width = mx - mn;
       if (mn > mx) return { ok: false, msg: `최소가 최대보다 큼 (${mn}-${mx})` };
-      if (mn < m.lo) return { ok: false, msg: `최소 ${mn} < 초기 차폐수준 ${m.lo} → 저차폐 위험 (plateau 구간 ${winTxt(m)})` };
-      if (mn < Lo) return { ok: false, msg: `최소 ${mn} 에서는 아직 비검사귀가 덮이지 않아 참역치가 안정되지 않음(저차폐) — plateau 구간 ${winTxt(m)}` };
+      if (mn < m.lo) return { ok: false, msg: `오답` };
+      if (mn < Lo) return { ok: false, msg: `오답` };
       if (mx > Hi) return { ok: false, msg: m.maxEM > Hi ? `최대 ${mx} > 차폐음 최대 출력 ${Hi} (그 이상은 NR로 올라가지 않음)` : `최대 ${mx} > 과차폐 한계 ${Hi} (TE BC + IA) → 과차폐` };
       const need = w >= 15 ? 15 : Math.min(10, w);
-      if (width < need) return { ok: false, msg: `폭 ${width} dB < ${need} dB${w < 15 ? ` (plateau 가능 폭이 ${w} dB로 좁은 small plateau)` : ' (plateau는 15 dB 이상 필요)'} — 구간 ${winTxt(m)}` };
+      if (width < need) return { ok: false, msg: `오답` };
       return { ok: true };
     }
 
     // ====================== 전체 채점 ======================
-    function gradeAll() {
+    function gradeAll(target) {
       const c = CASES[state.currentCase], T = c.trueThresholds, IA = getIA();
       const S = {
         acU: { name: '비차폐 기도 (O · X)', ok: 0, total: 0, fails: [] },
@@ -2142,10 +2156,10 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const chkSym = (sec, label, f, symbol, exp, hint) => {
         sec.total++;
         const got = find(f, symbol);
-        if (!got) { sec.fails.push(`${label} — 기입 없음 (정답 ${fmtExp(exp)})`); return; }
+        if (!got) { sec.fails.push(`${label} — 기입 없음`); return; }
         const g = { db: got.db, nr: !!got.nr };
         if (g.db === exp.db && g.nr === exp.nr) { sec.ok++; return; }
-        sec.fails.push(`${label} — 내 답 ${fmtExp(g)} → 정답 ${fmtExp(exp)}${hint ? ' · ' + hint : ''}`);
+        sec.fails.push(`${label} — 내 답 ${fmtExp(g)} → 오답`);
       };
 
       // 1) 비차폐 기도
@@ -2186,7 +2200,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         const exp = mode === 'air' ? expAC(te, x.freq, true) : expBCMask(te, x.freq);
         if (x.db === exp.db && !!x.nr === exp.nr) return;
         S.mSym.total++;
-        S.mSym.fails.push(`${earKo(te)} ${mode === 'air' ? '기도' : '골도'} ${x.freq} Hz ${mark} — ${m.needed ? '' : '차폐 불필요 구간에 '}기입값 ${fmtExp({ db: x.db, nr: !!x.nr })} 은(는) 참역치 ${fmtExp(exp)} 와 다름`);
+        S.mSym.fails.push(`${earKo(te)} ${mode === 'air' ? '기도' : '골도'} ${x.freq} Hz ${mark} — ${m.needed ? '' : '차폐 불필요 구간에 '}기입값 ${fmtExp({ db: x.db, nr: !!x.nr })} → 오답`);
       });
 
       // 4) 차폐음 범위 표 (NTE 칸)
@@ -2200,13 +2214,13 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         if (!m.needed) {
           if (p.kind === 'empty') return;                        // 불필요한 칸을 비워둠: 점수 대상 아님(정상)
           S.mRng.total++; td.classList.add('bad');
-          S.mRng.fails.push(`${label} — 차폐 불필요(${mode === 'air' ? (f === 8000 ? 'TE ACT − IA &lt; NTE ACT' : 'TE ACT − IA &lt; NTE BCT') : 'TE ABG &lt; 15'}) → 빈칸이어야 함`);
+          S.mRng.fails.push(`${label} — 오답`);
           return;
         }
         S.mRng.total++;
         if (m.kind === 'dilemma') {
           if (p.kind === 'dilemma') { S.mRng.ok++; td.classList.add('ok'); }
-          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — 마스킹 딜레마: 비검사귀를 덮는 최소 차폐음이 과차폐 한계(TE BC + IA = ${m.maxEM})에 닿아 10 dB 이상의 plateau 불가 → <b>차폐불가</b> 로 표기`); }
+          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${p.kind === 'empty' ? '범위 미기입' : '오답'}`); }
           return;
         }
         if (m.kind === 'dilemma_soft' && p.kind === 'dilemma') { S.mRng.ok++; td.classList.add('ok'); return; }
@@ -2214,7 +2228,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         if (expM.nr) {   // 차폐 후에도 무반응 → 반응 변화로 plateau를 확인할 수 없으므로 NR 표기
           const at = m.winLo;   // 톤이 최대 출력(NR)에 닿았는데도 무반응이 되는 최소 차폐음 = 그때 걸려 있던 차폐음
           if (p.kind === 'num' && (p.v === at || p.v === at + 5)) { S.mRng.ok++; td.classList.add('ok'); }
-          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — 차폐 후에도 무반응(NR) → plateau 확인 불가, <b>톤이 최대 출력(NR)에 닿았을 때의 차폐음</b>을 숫자 하나로 (정답 ${at} 또는 ${at + 5} — 차폐음을 5 dB씩 올렸는지 10 dB씩 올렸는지에 따라 다름)`); }
+          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${p.kind === 'empty' ? '범위 미기입' : '오답'}`); }
           return;
         }
         if (m.answers && m.answers.length) {
@@ -2222,24 +2236,25 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
           const hit = (p.kind === 'range' && m.answers.some(x => x.a === p.a && x.b === p.b)) ||
                       (p.kind === 'num' && m.answers.some(x => x.a === x.b && x.a === p.v));
           if (hit) { S.mRng.ok++; td.classList.add('ok'); }
-          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — 내 답 ${input.value || '빈칸'} → 정답 ${ansTxt} (IML ${mode === 'air' ? 'NTE ACT+10 또는 TE ACT−IA+10' : 'NTE ACT+10+OE'}, 5 dB씩 연속 4회 / 10 dB씩 연속 3회 반응)${m.kind === 'dilemma_soft' ? ' (또는 <b>차폐불가</b> 도 인정)' : ''}`); }
+          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${input.value ? '내 답 ' + input.value + ' → 오답' : '범위 미기입'}`); }
           return;
         }
         const r = evalRange(m, p);
         if (r.ok) { S.mRng.ok++; td.classList.add('ok'); }
-        else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${r.msg}${m.kind === 'dilemma_soft' ? ' (또는 <b>차폐불가</b> 도 인정)' : ''}`); }
+        else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${r.msg}`); }
       }));
 
       // 5) 난청 진단
+      S.dx.ears = { RE: { ok: 0, total: 0, fails: [] }, LE: { ok: 0, total: 0, fails: [] } };   // 귀별로도 따로 집계 (결과 화면 좌우 분할용)
       ['RE', 'LE'].forEach(ear => {
-        const d = classifyEar(T, ear);
+        const d = classifyEar(T, ear), E = S.dx.ears[ear];
         const one = (key, name, okFn, expTxt) => {
-          S.dx.total++;
+          S.dx.total++; E.total++;
           const sel = $id(`dx-${key}-${ear}`), td = $id(`dx-${key}-${ear}-td`);
           td.classList.remove('ok', 'bad');
-          if (!sel.value) { td.classList.add('bad'); S.dx.fails.push(`${earKo(ear)} ${name} — 미선택 (정답 ${expTxt})`); return; }
-          if (okFn(sel.value)) { S.dx.ok++; td.classList.add('ok'); }
-          else { td.classList.add('bad'); S.dx.fails.push(`${earKo(ear)} ${name} — 내 답 ${sel.options[sel.selectedIndex].text} → 정답 ${expTxt}`); }
+          if (!sel.value) { td.classList.add('bad'); S.dx.fails.push(`${earKo(ear)} ${name} — 미선택`); E.fails.push(`${name} — 미선택`); return; }
+          if (okFn(sel.value)) { S.dx.ok++; E.ok++; td.classList.add('ok'); }
+          else { td.classList.add('bad'); S.dx.fails.push(`${earKo(ear)} ${name} — 내 답 ${sel.options[sel.selectedIndex].text} → 오답`); E.fails.push(`${name} — 내 답 ${sel.options[sel.selectedIndex].text} → 오답`); }
         };
         one('type', '난청 유형', v => v === d.type, TYPE_LABEL[d.type]);
         one('deg', '난청 정도', v => d.degOK.has(v), `${d.deg} (4주파수 평균 ${+d.pta.toFixed(2)} dB HL)`);
@@ -2258,18 +2273,30 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       sessionScores[c.no] = pct;
       const done = Object.keys(sessionScores), avg = Math.round(done.reduce((a, k) => a + sessionScores[k], 0) / done.length);
       const colorOf = p => p >= 90 ? '#16a34a' : p >= 60 ? '#d97706' : '#dc2626';
-      const secHtml = secs.map(x => {
-        const p = x.total ? Math.round(100 * x.ok / x.total) : 100;
-        const body = x.auto ? '<div class="gr-empty" style="color:#64748b;">🔉 차폐 문제 — 비차폐 역치가 미리 기입되어 채점에서 제외</div>' : x.fails.length ? `<ul class="gr-fails">${x.fails.map(t => `<li>${t}</li>`).join('')}</ul>`
-          : `<div class="gr-empty">${x.total ? '모두 정답 ✓' : '채점 대상 없음 (차폐 불필요 → 빈칸 유지) ✓'}</div>`;
-        return `<div class="gr-sec"><div class="gr-sec-head"><b>${x.name}</b><span style="color:${x.auto ? '#64748b' : colorOf(p)}">${x.auto ? '제외' : `${x.ok}/${x.total} · ${p}%`}</span></div><div class="gr-bar"><i style="width:${x.auto ? 0 : p}%; background:${colorOf(p)}"></i></div>${body}</div>`;
-      }).join('');
+      const bodyOf = x => x.auto ? '<div class="gr-empty" style="color:#64748b;">🔉 미리 기입되어 채점 제외</div>' : x.fails.length ? `<ul class="gr-fails">${x.fails.map(t => `<li>${t}</li>`).join('')}</ul>`
+          : `<div class="gr-empty">${x.total ? '모두 정답 ✓' : '채점 대상 없음 ✓'}</div>`;
+      const pctOf = x => x.total ? Math.round(100 * x.ok / x.total) : 100;
+      const scoreTxt = x => x.auto ? '제외' : `${x.ok}/${x.total} · ${pctOf(x)}%`;
+      const head = (name, x) => `<div class="gr-sec-head"><b>${name}</b><span style="color:${x.auto ? '#64748b' : colorOf(pctOf(x))}">${scoreTxt(x)}</span></div><div class="gr-bar"><i style="width:${x.auto ? 0 : pctOf(x)}%; background:${colorOf(pctOf(x))}"></i></div>`;
+      const secCard = x => `<div class="gr-sec">${head(x.name, x)}${bodyOf(x)}</div>`;
+      // 비차폐 기도·골도는 한 칸에 좌(기도) · 우(골도)로 나란히 — 세로 길이 줄이기
+      const A = S.acU, B = S.bcU;
+      const AB = { ok: (A.auto ? 0 : A.ok) + (B.auto ? 0 : B.ok), total: (A.auto ? 0 : A.total) + (B.auto ? 0 : B.total), auto: A.auto && B.auto };
+      const col = (label, x) => `<div><div class="gr-col-head"><b>${label}</b><span style="color:${x.auto ? '#64748b' : colorOf(pctOf(x))}">${x.auto ? '제외' : `${x.ok}/${x.total}`}</span></div>${bodyOf(x)}</div>`;
+      const unmaskedCard = `<div class="gr-sec">${head('비차폐 역치 (기도 · 골도)', AB)}<div class="gr-split">${col('기도 O · X', A)}${col('골도 &lt; &gt;', B)}</div></div>`;
+      // 차폐 후 참역치 · 차폐음 범위도 한 칸에 좌(참역치) · 우(범위)로
+      const M = S.mSym, N = S.mRng;
+      const MN = { ok: M.ok + N.ok, total: M.total + N.total };
+      const maskedCard = `<div class="gr-sec">${head('차폐 결과 (참역치 · 차폐음 범위)', MN)}<div class="gr-split">${col('참역치 △ □ [ ]', M)}${col('범위표 · 필요 판단', N)}</div></div>`;
+      // 난청 진단도 좌(좌측 귀) · 우(우측 귀)로
+      const dxCard = `<div class="gr-sec">${head(S.dx.name, S.dx)}<div class="gr-split">${col('좌측 귀 (Lt)', S.dx.ears.LE)}${col('우측 귀 (Rt)', S.dx.ears.RE)}</div></div>`;
+      const secHtml = unmaskedCard + maskedCard + dxCard;
       const noteHtml = notes.length ? `<div class="gr-notes"><b>참고 (감점 없음)</b><br>${notes.join('<br>')}</div>` : '';
       $id('gradeResult').innerHTML =
         `<div class="gr-total"><div class="gr-pct" style="color:${pct >= 90 ? '#86efac' : pct >= 60 ? '#fcd34d' : '#fca5a5'}">${pct}%</div>` +
         `<div class="gr-sub">문제 #${c.no} · ${okSum} / ${totSum} 항목 정답<br>채점 기준 ${state.phone === 'insert' ? 'Insert' : 'Supra'} IA ${IA} · 이번 세션 ${done.length}문제 평균 ${avg}%</div></div>` +
         secHtml + noteHtml;
-      openPanel('result');
+      openPanel(target === 'answer' ? 'answer' : 'result');
     }
 
     // ---------- 정답지(답안 시트) 보조 표 ----------
