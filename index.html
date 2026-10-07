@@ -1901,7 +1901,10 @@
       const nteUAC = Math.min(nteAC, teBC + IA);
       const nteUBC = Math.min(nteBC, teBC);
       const nteABG = Math.max(0, nteAC - nteBC);      // NTE의 실제 전도성 요소
-      const oe = nteABG < 15 ? getOE(freq) : 0;    // 교재 기준: NTE ABG ≥ 15(전음성·혼합성)이면 OE 미적용, 건청·SNHL만 OE 적용
+      const oe = nteABG < 15 ? getOE(freq) : 0;    // 실제 폐쇄효과(환자 반응 계산용): NTE 중이가 정상일 때만 생김
+      // 학생이 청력도에서 보는 NTE ABG = NTE 비차폐 기도 − 비차폐 골도(좋은 쪽 와우 값). IML 판단(OE 넣기 · −30 방법 허용)은 이 값으로
+      const visABG = Math.max(0, nteUAC - nteUBC);
+      const oeIml = visABG < 15 ? getOE(freq) : 0;  // 교재 기준: 보이는 NTE ABG ≥ 15면 OE 미적용
 
       const maxEM = teBC + IA;
       const maxCap = maxEM >= 120 ? 120 : maxEM;
@@ -1909,7 +1912,7 @@
       let needed, minA, minB = null, phys = 0, cands;
       if (mode === 'bone') {
         needed = (teUAC - teUBC) >= 15;
-        minA = nteUAC + 10 + oe;
+        minA = nteUAC + 10 + oeIml;
         const cap = BC_MAX[freq] || 0;
         const sig = teBC > cap ? cap : teBC - 5;               // TE 역치 바로 아래(NR이면 최대 출력) 신호
         const tone = sig + oe;
@@ -1924,18 +1927,24 @@
         const cross = sig - IA;
         if (cross >= nteBC) phys = cross + nteABG;
         // NTE 전도성(ABG≥10)이면 ③은 부적합 → ABG 반영한 실효 필요량으로 대체
-        cands = nteABG >= 10 ? (phys > 0 ? [minA, phys] : [minA]) : [minA, minB];
+        cands = visABG >= 10 ? (phys > 0 ? [minA, phys] : [minA]) : [minA, minB];   // 보이는 NTE ABG가 있으면 −30 방법(③) 제외
       }
 
-      let lo = Math.min(...cands), hi = Math.max(...cands, phys);
+      // 정답 범위의 하한 = 교재 IML (학생이 청력도에서 계산할 수 있는 값). 물리적 필요량(phys)은 상한 쪽에만 반영
+      //  골도: NTE ACT + 10 + OE(보이는 NTE ABG ≥ 15면 OE 없음) / 기도: NTE ACT + 10, 보이는 NTE ABG < 10이면 −30 방법도 허용(둘 중 작은 값)
+      const imlLo = mode === 'bone' ? minA : (visABG >= 10 ? minA : Math.min(minA, minB));
+      let lo = imlLo, hi = Math.max(...cands, phys);
       lo = Math.max(0, Math.min(lo, maxCap));
       hi = Math.max(lo, Math.min(hi, maxCap));
 
       // 마스킹 딜레마: 필요한 최소 차폐(Min = NTE AC+10)가 과차폐 한계(Max = TE BC+IA) 이상 → plateau가 없음
       const dilemma = maxEM < 120 && (minA >= maxEM || phys >= maxEM);
+      // 학생이 보는 값으로 계산한 딜레마: IML이 '비차폐 BCT + IA'에 10 dB 미만으로 붙으면 차폐불가로 판단해도 정답 인정
+      const visMaxEM = (acOnly(freq) ? teUAC : teUBC) + IA;
+      const visDilemma = visMaxEM < 120 && (visMaxEM - imlLo) < 10;
       const width = maxEM >= 120 ? 999 : maxEM - lo;
-const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC, nteUBC, nteABG, oe,
-               maxEM, maxCap, needed, minA, minB, phys, lo, hi, dilemma, formulaDilemma: dilemma, width, reliable: width >= 15 };
+const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC, nteUBC, nteABG, oe, visABG, oeIml,
+               maxEM, maxCap, needed, minA, minB, phys, lo, hi, dilemma, formulaDilemma: dilemma || visDilemma, visDilemma, visMaxEM, width, reliable: width >= 15 };
       if (needed) addPlateauWindow(res, mode, freq);
       return res;
     }
@@ -2003,7 +2012,9 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const unm = bone ? expBCUnm(freq) : expAC(res.te, freq, false);
       const toneStart = Math.min(unm.db, toneCap);
       const truth = bone ? expBCMask(res.te, freq) : expAC(res.te, freq, true);
-      const imls = bone ? [res.minA] : [res.minA, res.teUAC - res.IA + 10];
+      // 기도: 교재대로 'NTE ACT+10 혹은 TE ACT−IA+10' 둘 다 시작점으로 인정. 단 NTE에 전음성 요소(ABG ≥ 10)가 있으면
+      //  TE ACT−IA+10은 NTE 중이에서 깎여 저차폐(가짜 plateau)가 되므로 제외 (채점의 IML 하한과 같은 기준)
+      const imls = bone ? [res.minA] : (res.visABG >= 10 ? [res.minA] : [res.minA, res.teUAC - res.IA + 10]);
       const out = [];
       imls.forEach((iml, k) => [[5, 4], [10, 3]].forEach(([step, need]) => {
         const r = simulatePlateau(res, bone, iml, step, need, toneStart, toneCap, emCap, truth.db);
@@ -2404,7 +2415,9 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       if (mn < m.lo) return { ok: false, msg: `오답` };
       if (mn < Lo) return { ok: false, msg: `오답` };
       if (mx > Hi) return { ok: false, msg: m.maxEM > Hi ? `최대 ${mx} > 차폐음 최대 출력 ${Hi} (그 이상은 NR로 올라가지 않음)` : `최대 ${mx} > 과차폐 한계 ${Hi} (TE BC + IA) → 과차폐` };
-      const need = w >= 15 ? 15 : Math.min(10, w);
+      // 15 dB plateau가 원칙. 단 학생이 보는 과차폐 한계(비차폐 BCT + IA)까지 15 dB가 안 되면 10 dB small plateau도 인정 (교재 BC Case 7)
+      const visRoom = (m.visMaxEM !== undefined ? m.visMaxEM : Hi) - Lo;
+      const need = (w >= 15 && visRoom >= 15) ? 15 : Math.min(10, w);
       if (width < need) return { ok: false, msg: `오답` };
       return { ok: true };
     }
