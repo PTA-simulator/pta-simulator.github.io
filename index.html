@@ -8,8 +8,10 @@
     (function () {
       var m = 'auto'; try { m = localStorage.getItem('pta-ui-mode') || 'auto'; } catch (e) {}
       var narrow = Math.min(screen.width || 9999, window.outerWidth || 9999) <= 767;
-      if (m === 'phone' || (m === 'auto' && narrow)) document.documentElement.classList.add('phone-mode');
-      if (m === 'pc' && (screen.width || 9999) < 1024) document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=1300');
+      var realPhone = Math.min(screen.width || 9999, screen.height || 9999) <= 767;   // 실제 폰(세로·가로 모두)은 항상 폰 화면
+      if (realPhone && m === 'pc') { m = 'auto'; try { localStorage.setItem('pta-ui-mode', 'auto'); } catch (e) {} }
+      if (realPhone || m === 'phone' || (m === 'auto' && narrow)) document.documentElement.classList.add('phone-mode');
+      if (realPhone) document.documentElement.classList.add('real-phone');
     })();
   </script>
   <title>PTA 시뮬레이터 | 순음청력검사·차폐 연습 프로그램</title>
@@ -309,6 +311,7 @@
     .sp-tab { border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:800; font-size:12px; padding:6px 12px; border-radius:8px; }
     .sp-tab:hover { background:#334155; color:#f1f5f9; }
     .sp-tab.active { background:#38bdf8; border-color:#7dd3fc; color:#0f172a; box-shadow:0 0 0 2px rgba(56,189,248,.25); }
+    #spTab-result:active { background:#38bdf8; border-color:#7dd3fc; color:#0f172a; box-shadow:0 0 0 2px rgba(56,189,248,.25); }   /* 채점하기: 누르는 동안만 파랑 */
     .sp-close { border:1px solid #f87171; background:#dc2626; color:#fff; font-weight:900; width:30px; height:30px; border-radius:8px; box-shadow:0 2px 6px rgba(220,38,38,.35); }
     .sp-close:hover { background:#ef4444; }
     .sp-close:active { background:#b91c1c; }
@@ -363,6 +366,40 @@
       100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); background-color: inherit; }                                            /* 천천히 꺼짐 */
     }
     .audiogram-card.ag-flash { animation: agFlash 1.2s linear; }
+    /* 채점 알림: 청력도 + 차폐 범위(플라토) 영역 전체를 감싸는 파란 테두리 점멸 (출제 때 노란 점멸과 같은 방식) */
+    @keyframes gradeFrameFlash {
+      0%   { opacity: 1; box-shadow: 0 0 0 4px rgba(56,189,248,0.9), 0 0 22px 6px rgba(56,189,248,0.5), inset 0 0 0 3px rgba(56,189,248,0.9); background-color: rgba(56,189,248,0.10); }
+      100% { opacity: 0; box-shadow: 0 0 0 0 rgba(56,189,248,0), 0 0 0 0 rgba(56,189,248,0), inset 0 0 0 0 rgba(56,189,248,0); background-color: rgba(56,189,248,0); }
+    }
+    .grade-frame { position: absolute; z-index: 30; pointer-events: none; border-radius: 14px; animation: gradeFrameFlash 1.2s linear forwards; }
+    @media (prefers-reduced-motion: reduce) { .grade-frame { animation-duration: .01s; } }
+    /* 채점 결과 안의 '내가 쓴 차폐 범위표' 스냅샷 (읽기 전용, 정답=초록 · 오답=빨강) */
+    .gr-ms-snap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:6px; border-radius:6px; }
+    .gr-ms-snap .ms-table { min-width:0; font-size:10.5px; }
+    .gr-ms-snap .ms-table th, .gr-ms-snap .ms-table td { height:26px; padding:0 2px; font-size:10.5px; }
+    .gr-ms-snap .ms-table .ms-corner { font-size:10.5px; padding-left:5px; }
+    .gr-ms-snap .ms-table td.ms-in span { display:block; font:700 10.5px ui-monospace,Menlo,Consolas,monospace; letter-spacing:-.04em; color:#111827; white-space:nowrap; }
+    .gr-ms-snap .ms-table td.ms-in span.empty { color:#9ca3af; font-weight:400; }
+    /* 내가 쓴 답안 스냅샷은 폰 화면에서만 표시 (PC는 우측 패널에 입력표가 이미 보임) */
+    html:not(.phone-mode) .snap-phone { display:none !important; }
+    .gr-ms-snap .ms-key td { font-weight:700; line-height:1.35; vertical-align:middle; }
+    .gr-ms-snap .ms-key td.ms-grp, .gr-ms-snap .ms-key td.ms-ear { font-weight:800; }
+    /* 정답지: 플라토 묶음(내 답 + 정답) / 난청 진단 묶음(내 답 + 정답) — 묶음 안은 점선으로 살짝 띄우고, 묶음 사이는 더 넓게 */
+    .ans-group { background:#f8fafc; border:1.5px solid #94a3b8; border-radius:10px; padding:12px; margin-bottom:18px; }
+    .ans-title { font-weight:800; color:#1e293b; font-size:13.5px; padding-bottom:8px; margin-bottom:10px; border-bottom:1px solid #cbd5e1; }
+    .ans-sub-head { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:#334155; }
+    .ans-sep { border-top:2px dashed #cbd5e1; margin:14px 0 12px; }
+    /* PC 정답지: 마우스를 올린 묶음 = 우측 기입란에 떠 있는 탭과 짝 (테두리로 표시) */
+    html:not(.phone-mode) .ans-group[data-wk] { transition:border-color .15s, box-shadow .15s; }
+    html:not(.phone-mode) .ans-group.wk-linked { border-color:#4f46e5; box-shadow:0 0 0 2px rgba(79,70,229,.18); }
+    .gr-ms-legend.lt { color:#64748b; }
+    .gr-dx-snap .dx-table { font-size:11.5px; }
+    .gr-dx-snap .dx-table th, .gr-dx-snap .dx-table td { padding:4px 5px; }
+    .gr-dx-snap .dx-table td.dx-row { width:24%; white-space:nowrap; font-size:11.5px; }
+    .gr-dx-snap .dx-table span.dxv { display:block; font-weight:700; color:#1f2937; }
+    .gr-dx-snap .dx-table span.dxv.empty { color:#9ca3af; font-weight:400; }
+    .gr-ms-legend { font-size:10.5px; color:#94a3b8; }
+    .gr-ms-legend i { display:inline-block; width:9px; height:9px; border-radius:2px; vertical-align:-1px; margin:0 3px 0 6px; border:1px solid #1f2937; }
     .ag-newbadge { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); z-index: 20;
       background: #facc15; color: #1e293b; font-weight: 800; font-size: 15px; padding: 6px 16px; border-radius: 999px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.18); pointer-events: none; animation: agBadge 1.2s linear forwards; }   /* 청력도 점멸(1.2s)과 같은 타이밍 */
@@ -371,7 +408,8 @@
     .gr-dock { background:#0f172a !important; border-color:#0f172a !important; }
     .gr-dock .dock-tab { min-height:38px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:800; font-size:12.5px; padding:0 6px; border-radius:9px; white-space:nowrap; transition:background .12s, color .12s, box-shadow .12s; }
     .gr-dock .dock-tab:hover { background:#334155; color:#f1f5f9; }
-    .gr-dock .dock-main { grid-column:1 / span 2; color:#e0f2fe; border-color:#38bdf8; font-size:13.5px; }
+    .gr-dock .dock-main { grid-column:1 / span 2; font-size:13.5px; }   /* 평소엔 정답지 보기·기입 방법과 같은 바탕 */
+    .gr-dock .dock-main:active { background:#38bdf8 !important; border-color:#7dd3fc !important; color:#0f172a !important; box-shadow:0 0 0 2px rgba(56,189,248,.25); }   /* 누르는 동안만 파랑 */
     .gr-dock .dock-tab.active { background:#38bdf8; border-color:#7dd3fc; color:#0f172a; box-shadow:0 0 0 2px rgba(56,189,248,.25); }
 
     /* ===================== 휴대폰 전용 (767px 이하) — PC·패드 레이아웃은 그대로 ===================== */
@@ -389,6 +427,10 @@
     html.phone-mode .side-panel.m-fixed { position:fixed; left:0; right:0; top:0; bottom:var(--mnav-h, 64px); z-index:900; border-radius:0; border:0; }
     html.phone-mode .side-panel.m-fixed .sp-tab { padding:8px 10px; font-size:12.5px; }
     html.phone-mode .side-panel.m-fixed .sp-close { width:38px; height:38px; font-size:16px; }
+    /* 폰: 패널 상단의 채점하기·정답지·기입 방법 탭은 하단 버튼으로 대체되므로 숨기고 닫기(✕)만 남김 */
+    html.phone-mode .side-panel.m-fixed .sp-tabs { display:none !important; }
+    html.phone-mode .side-panel.m-fixed .sp-head { padding:6px 8px; }
+    html.phone-mode .side-panel.m-fixed .sp-close { margin-left:auto; }
     /* 헤더 한 줄로 압축: 출제 유형 + 🎲 + 🔉 */
     html.phone-mode header { padding: 6px 0 !important; }
     html.phone-mode header .title-group { display:none !important; }
@@ -399,9 +441,10 @@
     html.phone-mode .hc-controls button { font-size:12.5px !important; padding:8px 6px !important; white-space:nowrap; }
     /* 채점 줄은 기입표 화면에서만, 3칸 균등 */
     html.phone-mode body.mv-chart .gr-dock { display:none !important; }
+    html.phone-mode .m-nav .gr-dock { margin:0 !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; padding:8px 8px 0 !important; }   /* 하단 바 안에서는 카드 테두리 없이 */
     html.phone-mode .gr-dock { grid-template-columns: repeat(3, minmax(0,1fr)) !important; padding:8px !important; gap:5px !important; }
     html.phone-mode .gr-dock .dock-main { grid-column:auto !important; }
-    html.phone-mode .gr-dock .dock-tab { min-height:42px; font-size:12px !important; padding:0 3px !important; overflow:hidden; text-overflow:ellipsis; }
+    html.phone-mode .gr-dock .dock-tab { min-height:44px; font-size:13px !important; padding:0 3px !important; overflow:hidden; text-overflow:ellipsis; }
     /* 청력도 화면: 설명 글 숨기고 청력도를 크게 */
     html.phone-mode .audiogram-card #agHint { display:none !important; }
     html.phone-mode .symbol-card { padding:8px !important; }
@@ -421,8 +464,8 @@
     html.phone-mode .mk-seg.ear button small { font-size:10px; font-weight:800; }
     html.phone-mode .mk-seg.ear button.on.re { background:#ef4444; color:#fff; }
     html.phone-mode .mk-seg.ear button.on.le { background:#3b82f6; color:#fff; }
-    html.phone-mode .mk-seg.ear button.re:not(.on) { color:#fca5a5; }
-    html.phone-mode .mk-seg.ear button.le:not(.on) { color:#93c5fd; }
+    html.phone-mode .mk-seg.ear button.re:not(.on) { color:#ef4444; font-weight:800; }   /* 선택 안 된 Rt: 진한 빨강 */
+    html.phone-mode .mk-seg.ear button.le:not(.on) { color:#3b82f6; font-weight:800; }   /* 선택 안 된 Lt: 진한 파랑 */
     html.phone-mode .mk-seg.ear button:not(.on) small { color:#fbbf24; }          /* NTE = 차폐음이 들어가는 귀 */
 
     html.phone-mode .mk-ch { display:grid; grid-template-columns: 0.86fr 1.14fr; gap:6px; }
@@ -482,7 +525,7 @@
     html.phone-mode .symbol-card > div:first-child { margin-bottom:0 !important; }
     @media (prefers-reduced-motion: reduce) { html.phone-mode .m-mini button { transition:none !important; transform:none !important; } html.phone-mode .mk-present span, html.phone-mode .mk-sw { animation:none !important; } }
     html.phone-mode .m-tabs { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; padding:6px 8px 8px; }
-    html.phone-mode .m-tab { position:relative; min-height:42px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:800; font-size:13px; border-radius:10px; }
+    html.phone-mode .m-tab { position:relative; min-height:46px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:800; font-size:16px; border-radius:10px; }
     html.phone-mode .m-tab.active { background:#38bdf8; border-color:#7dd3fc; color:#0f172a; }
     html.phone-mode .m-tab .m-dot { display:none; position:absolute; top:5px; right:8px; min-width:9px; height:9px; border-radius:99px; background:#facc15; box-shadow:0 0 0 2px #0f172a; }
     html.phone-mode .m-tab.has-dot .m-dot { display:block; }
@@ -620,7 +663,9 @@
     /* 차폐 판단 안내: 청력도 아래 가운데, 한 줄 (넘치면 … · 마우스를 올리면 전체 문장) */
     .ag-hint { margin:6px 0 0; text-align:center; font-size:11px; font-weight:500; color:#7b8798; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     /* 이스터에그 환자: 메일 링크 */
-    .pt-chart .pc-mail { color:#4338ca; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+    .pt-chart .pc-mail { all:unset; cursor:copy; color:#4338ca; font-weight:700; border-bottom:1px dashed #a5b4fc; }
+    .pt-chart .pc-mail:hover { color:#312e81; border-bottom-color:#4338ca; }
+    .pt-chart .pc-mail.copied { color:#15803d; border-bottom-color:transparent; }
     .pt-chart .pc-mailbtn { display:inline-block; text-decoration:none; font-size:10.5px; font-weight:800; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:7px; padding:1px 7px; white-space:nowrap; }
     .pt-chart .pc-mailbtn:hover { background:#4f46e5; border-color:#4f46e5; color:#fff; }
     .pt-chart .pc-egg { font-size:10.5px; letter-spacing:-.01em; }
@@ -632,6 +677,34 @@
     /* 개발자 이스터에그: 봉투·하트는 손을 들 때만 보이게 */
     .pt-tool { opacity:0; transition:opacity .15s; }
     .pt-stage.raise .pt-tool { opacity:1; }
+    /* 실제 폰: PC 전환 버튼 숨김 (폰에서는 폰 화면만) */
+    html.real-phone .ui-mode-m, html.real-phone .ui-mode { display:none !important; }
+    /* 폰 화면: 청력도를 화면 가로폭에 맞춰 크게 */
+    html.phone-mode main { max-width: 680px !important; }
+    html.phone-mode .m-nav { max-width: 680px; }
+    html.phone-mode .audiogram-card .audiogram-shell { max-width: 100% !important; }
+    /* 폰 아래 조작부: 주파수 7 : 기록 3, 주파수 ‹ › 버튼은 '대기'만큼 크게 */
+    html.phone-mode .mk-act { grid-template-columns: minmax(0,1fr) minmax(0,1.61fr) minmax(0,.69fr) 44px !important; }
+    html.phone-mode .mk-ctl.freq { padding:3px; gap:3px; }
+    /* 주파수 ‹ › 는 손가락으로 누르기 쉽게 넓게, 가운데 표시는 내용만큼 좁게 */
+    html.phone-mode .mk-ctl.freq .mk-step { flex:1 1 0; min-width:44px; border-radius:8px; font-size:28px; }
+    html.phone-mode .mk-ctl.freq .mk-read { flex:0 0 42px; }
+    html.phone-mode .mk-ctl.freq .mk-read b { font-size:17px; letter-spacing:-.02em; }
+    html.phone-mode .mk-ctl.freq .mk-read span { font-size:9.5px; }
+    html.phone-mode .mk-rec b { font-size:15px; }
+    html.phone-mode .mk-rec .mk-sym { padding:2px 8px; }
+    /* 폰 기입표 화면 위 작은 청력도 (스크롤해도 위에 고정) */
+    .mini-ag { display:none; }
+    html.phone-mode body.mv-sheet .mini-ag { display:flex; justify-content:center; position:sticky; top:0; z-index:5; margin:-4px -4px 8px; padding:4px;
+      background:#fff; border-bottom:1px solid #e2e8f0; box-shadow:0 6px 10px -8px rgba(15,23,42,.25); }
+    html.phone-mode body.mv-sheet .mini-ag svg { width:100%; height:min(34vh, 300px); pointer-events:none; }
+    /* PC에서 폰 화면을 볼 때(실제 폰 아님): 기입표 화면이 스크롤 없이 한 화면에 들어오는 최대 크기로 청력도를 키움 */
+    html.phone-mode:not(.real-phone) body.mv-sheet .mini-ag { position:static; box-shadow:none; }
+    html.phone-mode:not(.real-phone) body.mv-sheet .mini-ag svg { height:var(--mini-h, min(34vh, 300px)); }   /* --mini-h: 스크롤이 생기지 않는 최대 크기 (JS 계산) */
+    /* 차폐 범위 · 난청 진단 탭: 마우스를 올리면 다른 버튼처럼 밝게 */
+    .wk-tab { cursor:pointer; transition:background-color .15s, border-color .15s, color .15s, box-shadow .15s; }
+    .wk-tab:not(.active):hover { background:#e0e7ff; border-color:#a5b4fc; color:#3730a3; }
+    .wk-tab.active:hover { background:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.22); }
 </style>
 </head>
 <body>
@@ -844,9 +917,15 @@
     .ms-table td.ms-in { padding:0; }
     .ms-table td.ms-in input { width:100%; height:40px; border:0; outline:none; background:transparent; text-align:center; font:700 12px ui-monospace,Menlo,Consolas,monospace; color:#111827; padding:0 1px; letter-spacing:-.04em; }
     .ms-table td.ms-in input:focus { background:#eef2ff; box-shadow:inset 0 0 0 2px #6366f1; }
-    .ms-table td.cur-cell { background:#fffbeb; }
-    .ms-table td.ok { background:#dcfce7; }
-    .ms-table td.bad { background:#fee2e2; }
+    .ms-table td.cur-cell { background:#fffbeb; box-shadow:inset 0 0 0 2px #f59e0b; }   /* 지금 검사 중인 칸: 노란 테두리 */
+    .ms-table td.ok { background:#bbf7d0; }      /* 채점: 정답 = 초록 */
+    .ms-table td.bad { background:#fecaca; }     /* 채점: 오답 = 빨강 */
+    .ms-table td.cur-cell.ok, .ms-table td.cur-cell.bad { box-shadow:inset 0 0 0 2px #f59e0b; }   /* 채점 색이 우선, 테두리만 유지 */
+    /* 채점 결과 · 정답지를 보는 동안에는 노란 안내선(현재 주파수 열 · 입력 칸)을 끄고 정답/오답 색만 보이게 (패널을 닫으면 다시 노랗게) */
+    body.sp-open .ms-table th.cur-col { background:#fff; font-weight:600; color:#111827; }
+    body.sp-open .ms-table td.cur-cell { box-shadow:none !important; }
+    body.sp-open .ms-table td.cur-cell:not(.ok):not(.bad):not(.ms-gray) { background:#fff !important; }
+    .ms-table td.ok input, .ms-table td.bad input { background:transparent !important; }
     .ms-note { font-size:11px; color:#64748b; line-height:1.55; margin-top:9px; }
     .ms-note b { color:#334155; }
     .ms-howto { margin-top:8px !important; }
@@ -927,7 +1006,7 @@
     <div class="right-column-stack">
       <!-- 채점 -->
       <div class="card gr-dock">
-        <button id="dockBtn-result" onclick="dockClick('result'); this.blur();" class="dock-tab dock-main" title="누를 때마다 지금 기입한 내용으로 채점하고 결과 보기">✅ 전체 채점</button>
+        <button id="dockBtn-result" onclick="dockClick('result'); this.blur();" class="dock-tab dock-main" title="누를 때마다 지금 기입한 내용으로 채점하고 결과 보기">✅ 채점하기</button>
         <button id="dockBtn-answer" onclick="dockClick('answer'); this.blur();" class="dock-tab" title="정답지 보기 · 청력도에 정답 오버레이 · 다시 누르면 닫기">📖 정답지 보기</button>
         <button id="dockBtn-guide" onclick="dockClick('guide'); this.blur();" class="dock-tab" title="기입법 · 기입 순서 · 진단 기준 · 다시 누르면 닫기">ⓘ 기입 방법</button>
       </div>
@@ -1005,6 +1084,8 @@
 
       <!-- 차폐 범위표 / 난청 진단 (탭) -->
       <div class="card wk-card">
+        <!-- 폰 기입표 화면: 위에 작은 청력도(읽기 전용)를 고정해 보면서 기입 -->
+        <div id="miniAg" class="mini-ag" aria-label="청력도 미리보기"><svg id="miniAgSvg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet"></svg></div>
         <div class="wk-tabs">
           <button id="wkTab-mask" class="wk-tab active" onclick="setWorkTab('mask')"><span class="lbl-l">① 차폐 범위</span><span class="lbl-s">① 차폐범위</span></button>
           <button id="wkTab-dx" class="wk-tab" onclick="setWorkTab('dx')"><span class="lbl-l">② 난청 진단</span><span class="lbl-s">② 난청진단</span></button>
@@ -1013,7 +1094,7 @@
         </div>
         <div id="wkPane-mask" class="wk-pane">
           <div class="ms-wrap" id="maskSheetWrap"></div>
-          <p class="ms-note ms-howto">차폐가 필요한 칸에는 plateau 구간을 <b>최소-최대</b>로 적습니다 (예: 15-30). 차폐 중 톤이 최대 출력(NR)에 닿아 더 올릴 수 없는데도 무반응이면, <b>그때 주고 있던 차폐음을 최대 차폐음으로 보고 숫자 하나만</b> 적습니다 (예: 75). 마스킹 딜레마로 plateau를 만들 수 없으면 <b>차폐불가</b>라고 적습니다. 차폐가 필요 없는 칸은 비워 둡니다.</p>
+          <p class="ms-note ms-howto">차폐가 필요한 칸에는 plateau 구간을 <b>최소-최대</b>로 적습니다 (예: 15-30). 차폐 중 톤이 최대 출력(NR)에 닿아 더 올릴 수 없는데도 무반응이면, <b>그때 주고 있던 차폐음을 최대 차폐음으로 보고 숫자 하나만</b> 적습니다 (예: 75). 마스킹 딜레마로 plateau를 만들 수 없으면 <b>차폐불가</b> 또는 <b>-</b>(마이너스 기호)라고 적습니다. 차폐가 필요 없는 칸은 비워 둡니다.</p>
         </div>
         <div id="wkPane-dx" class="wk-pane hidden">
           <table class="dx-table">
@@ -1030,7 +1111,7 @@
     <div id="sidePanel" class="side-panel hidden">
       <div class="sp-head">
         <div class="sp-tabs">
-          <button id="spTab-result" class="sp-tab" onclick="gradeAll(); this.blur();" title="누를 때마다 지금 기입한 내용으로 다시 채점">✅ 채점 결과</button>
+          <button id="spTab-result" class="sp-tab" onclick="gradeAll(); this.blur();" title="누를 때마다 지금 기입한 내용으로 다시 채점">✅ 채점하기</button>
           <button id="spTab-answer" class="sp-tab" onclick="gradeAll('answer'); this.blur();">📖 정답지</button>
           <button id="spTab-guide" class="sp-tab" onclick="openPanel('guide')">ⓘ 기입 방법</button>
         </div>
@@ -1054,7 +1135,7 @@
           <ul>
             <li>차폐음을 <b>제시한 귀(NTE)의 칸</b>에 검사 귀가 반응한 차폐음 범위를 <kbd>최소-최대</kbd>로 (예: <kbd>45-60</kbd>)</li>
             <li>Rt 줄 = 우측 귀에 소음을 준 경우(= 좌측이 검사 귀)</li>
-            <li>차폐가 필요 없는 칸은 <b>빈칸</b>, plateau가 불가능하면 <kbd>차폐불가</kbd>, 차폐해도 검사 귀가 끝까지 무반응(NR)이면 plateau를 확인할 수 없으므로 톤이 최대 출력(NR)에 도달했는데도 무반응이던 <b>그 순간의 차폐음</b>을 숫자 하나로 (예: <kbd>75</kbd>)</li>
+            <li>차폐가 필요 없는 칸은 <b>빈칸</b>, plateau가 불가능하면 <kbd>차폐불가</kbd> 또는 <kbd>-</kbd>(마이너스 기호), 차폐해도 검사 귀가 끝까지 무반응(NR)이면 plateau를 확인할 수 없으므로 톤이 최대 출력(NR)에 도달했는데도 무반응이던 <b>그 순간의 차폐음</b>을 숫자 하나로 (예: <kbd>75</kbd>)</li>
             <li>골도 8 kHz는 검사하지 않아 회색. 채점은 <b>현재 선택된 이어폰의 IA</b> 기준</li>
           </ul>
           <h4>난청 진단 기준</h4>
@@ -1086,7 +1167,7 @@
     const acOnly  = f => f === 6000 || f === 8000;                                  // 6000·8000Hz: 골도 없음 → 기도 차폐 판단·계산을 AC로만
     const BONE_FALLBACK = { 750:500, 1500:1000, 3000:2000, 6000:4000, 8000:4000 };
     const LEVEL_MIN = -10, LEVEL_MAX = 120, LEVEL_RANGE = LEVEL_MAX - LEVEL_MIN;
-    const FREQ_X = { 250:80, 500:150, 750:191, 1000:220, 1500:261, 2000:290, 3000:331, 4000:360, 6000:401, 8000:430 };   // 옥타브 간격 균등(70px), 사이주파수는 로그 눈금 위치
+    const FREQ_X = { 250:80, 500:150, 750:185, 1000:220, 1500:255, 2000:290, 3000:325, 4000:360, 6000:395, 8000:430 };   // 옥타브 간격 균등(70px), 사이주파수는 양옆 주파수의 정가운데
     const NR = 130;                                                                // 무반응(No Response) 표식값
     // 기기 한계 (dB HL): 임상용 중 출력이 가장 높은 기기(Interacoustics 계열, 확장범위 사용) 기준, 변환기별
     //  · 헤드폰 TDH-39/49 · 삽입이어폰 E-A-RTONE 3A(IP30) · 골진동기 B71 계열 (8 kHz는 추정치)
@@ -1591,14 +1672,23 @@
       let html = `
         <div style="font-size:12px; color:#475569; margin-bottom:10px;">🏷 출제 유형: <b>${c.kind}</b> · 채점 기준 <b>${state.phone === 'insert' ? 'Insert' : 'Supra'} IA ${IA}</b></div>
         ${answerPicHtml()}
-        ${maskKeyHtml()}
-        ${diagBoxHtml(T)}
+        <div class="ans-group" data-wk="mask" title="마우스를 올리면 우측 기입란이 ① 차폐 범위로 바뀝니다">
+          <div class="ans-title">📝 ① 차폐 범위 (플라토)</div>
+          <div id="ansMySheet" class="snap-phone"></div>
+          ${maskKeyHtml()}
+        </div>
+        <div class="ans-group" data-wk="dx" title="마우스를 올리면 우측 기입란이 ② 난청 진단으로 바뀝니다">
+          <div class="ans-title">🩺 ② 난청 진단</div>
+          <div id="ansMyDx" class="snap-phone"></div>
+          ${diagBoxHtml(T)}
+        </div>
         <details style="margin-top:2px;">
           <summary style="cursor:pointer; font-size:12px; font-weight:700; color:#64748b; padding:6px 2px;">참고 — 사이주파수 판정 · 마스킹 딜레마 설명</summary>
           <div style="margin-top:8px;">${interBox}${dilBox}</div>
         </details>
       `;
       document.getElementById('trueAnswerText').innerHTML = html;
+      syncAnsLink();
     }
 
     // 좌측 패널(채점 결과 / 정답지 / 안내) — 정답지 탭일 때만 청력도에 정답 오버레이 표시
@@ -1613,9 +1703,10 @@
     function openPanel(tab) {
       if (tab === 'guide') clearGradeMarks();          // 기입 방법 탭만 채점 색을 지움 (정답지는 채점과 같이 색 유지)
       document.getElementById('sidePanel').classList.remove('hidden');
+      document.body.classList.add('sp-open');
       ['result', 'answer', 'guide'].forEach(t => {
         document.getElementById('spPane-' + t).classList.toggle('hidden', t !== tab);
-        document.getElementById('spTab-' + t).classList.toggle('active', t === tab);
+        document.getElementById('spTab-' + t).classList.toggle('active', t === tab && t !== 'result');   // 채점하기는 누를 때만 파랑 (토글 아님)
       });
       state.panelTab = tab;
       document.querySelector('.sp-body').scrollTop = 0;
@@ -1625,20 +1716,21 @@
     function closePanel() {
       clearGradeMarks();
       document.getElementById('sidePanel').classList.add('hidden');
+      document.body.classList.remove('sp-open');
       state.panelTab = null;
       setAnswerOverlay(false);
       syncDock();
     }
     function toggleCaseDetails() { dockClick('answer'); }
-    // 우측 세 버튼: 해당 탭이 열려 있으면 다시 눌러 닫기, 아니면 열기(전체 채점은 채점 후 결과 탭)
+    // 우측 세 버튼: 해당 탭이 열려 있으면 다시 눌러 닫기, 아니면 열기(채점하기는 채점 후 결과 탭)
     function dockClick(tab) {
-      if (tab === 'result') { gradeAll(); return; }          // 전체 채점: 누를 때마다 다시 채점 (닫기는 패널의 ✕)
-      if (state.panelTab === tab) { closePanel(); return; }
+      if (state.panelTab === tab) { closePanel(); return; }   // 열려 있는 탭을 다시 누르면 닫기 (채점하기 포함)
+      if (tab === 'result') { gradeAll(); return; }          // 채점하고 결과 열기
       if (tab === 'answer') { gradeAll('answer'); return; }   // 정답지 보기도 채점 → 칸 색 표시
       openPanel(tab);
     }
     const DOCK_LABEL = {
-      result: ['✅ 전체 채점', '🔄 다시 채점'],
+      result: ['✅ 채점하기', '✕ 채점 닫기'],
       answer: ['📖 정답지 보기', '✕ 정답지 닫기'],
       guide:  ['ⓘ 기입 방법', '✕ 기입 방법 닫기']
     };
@@ -1657,7 +1749,24 @@
         document.getElementById('wkPane-' + x).classList.toggle('hidden', x !== t);
         document.getElementById('wkTab-' + x).classList.toggle('active', x === t);
       });
+      syncAnsLink();
     }
+    // PC 정답지: 우측 기입란에 떠 있는 탭(①/②)과 짝인 정답 묶음에 테두리 표시
+    function syncAnsLink() {
+      const box = document.getElementById('trueAnswerText'), tab = document.getElementById('wkTab-dx'); if (!box || !tab) return;
+      const cur = tab.classList.contains('active') ? 'dx' : 'mask';
+      box.querySelectorAll('.ans-group[data-wk]').forEach(g => g.classList.toggle('wk-linked', g.dataset.wk === cur));
+    }
+    // PC 정답지: 차폐 범위 / 난청 진단 묶음에 마우스를 올리면 우측 기입란이 같은 쪽으로 자동 전환 (폰 화면은 해당 없음)
+    (function () {
+      const box = document.getElementById('trueAnswerText'); if (!box) return;
+      box.addEventListener('mouseover', e => {
+        if (isPhone()) return;
+        const g = e.target.closest && e.target.closest('.ans-group[data-wk]'); if (!g) return;
+        const cur = document.getElementById('wkTab-dx').classList.contains('active') ? 'dx' : 'mask';
+        if (g.dataset.wk !== cur) setWorkTab(g.dataset.wk);
+      });
+    })();
 
     function updateFreqButtons() {
       [8000, ...interList].forEach(f => {      // 골도: 8000Hz·사이주파수는 검사 안 함
@@ -2242,7 +2351,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       document.querySelectorAll('.ms-table input').forEach(el => { el.value = ''; });
       document.querySelectorAll('.ms-table td.ok, .ms-table td.bad, #dxBody td.ok, #dxBody td.bad').forEach(td => td.classList.remove('ok', 'bad'));
       document.querySelectorAll('#dxBody select').forEach(el => { el.value = ''; });
-      const r = $id('gradeResult'); if (r) r.innerHTML = '<div class="sp-empty">아직 채점하지 않았어요.<br>위의 <b>✅ 채점 결과</b> 탭이나 <b>✅ 전체 채점</b> 버튼을 누르면 바로 채점됩니다.</div>';
+      const r = $id('gradeResult'); if (r) r.innerHTML = '<div class="sp-empty">아직 채점하지 않았어요.<br>위의 <b>✅ 채점하기</b> 버튼을 누르면 바로 채점됩니다.</div>';
     }
     function clearAllPlateauPractice() { resetPractice(); }
     // 차폐 범위표(plateau) 입력값과 채점 색 표시만 지움 (청력도 기호·진단·결과는 유지)
@@ -2254,9 +2363,9 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
 
     // 범위 문자열 해석: '45-60' / '45~60' / '45 – 60' → 범위, '차폐불가' → 딜레마
     function parseRange(raw) {
+      if (/^(차폐불가|[-–—−])$/.test(String(raw || '').replace(/\s+/g, ''))) return { kind: 'dilemma' };   // 차폐불가 = '차폐불가' 또는 '-'(마이너스) 기호 하나만 인정
       const s = String(raw || '').trim().replace(/[–—−~∼]/g, '-').replace(/\s+/g, '');
       if (!s) return { kind: 'empty' };
-      if (/^(d|dil|dilemma|딜레마|차폐불가|차폐불능)$/i.test(s)) return { kind: 'dilemma' };
       if (/^(nr|무반응|no?response)$/i.test(s)) return { kind: 'nr' };
       const num = s.match(/^(\d+)(?:db)?$/i);
       if (num) return { kind: 'num', v: +num[1] };
@@ -2301,7 +2410,55 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     }
 
     // ====================== 전체 채점 ======================
+    // ---- 채점·정답지 패널에 넣는 '내가 기입한 답안' 스냅샷 (폰에서 입력표가 가려져도 비교할 수 있도록) ----
+    const GR_LEGEND = '<span class="gr-ms-legend"><i style="background:#bbf7d0"></i>정답<i style="background:#fecaca"></i>오답<i style="background:#8a9099"></i>해당 없음</span>';
+    function mySheetSnapHtml() {   // 차폐 범위(플라토) 표 — 채점 색(초록/빨강) 그대로
+      const src = document.querySelector('#maskSheetWrap .ms-table'); if (!src) return '';
+      const t = src.cloneNode(true), ins = src.querySelectorAll('input');
+      t.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));            // 중복 id 방지
+      t.querySelectorAll('.cur-col, .cur-cell').forEach(e => e.classList.remove('cur-col', 'cur-cell'));
+      t.querySelectorAll('input').forEach((inp, i) => {
+        const v = ins[i].value.trim();
+        const sp = document.createElement('span'); sp.textContent = v || '—'; if (!v) sp.className = 'empty';
+        inp.replaceWith(sp);
+      });
+      return `<div class="gr-ms-snap">${t.outerHTML}</div>`;
+    }
+    function myDxSnapHtml() {      // 난청 진단(유형·정도·형태) — 내가 고른 답, 채점 색 포함
+      const src = document.querySelector('.wk-card .dx-table'); if (!src) return '';
+      const t = src.cloneNode(true), sels = src.querySelectorAll('select');
+      t.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+      t.querySelectorAll('select').forEach((sel, i) => {
+        const o = sels[i].options[sels[i].selectedIndex], v = o && sels[i].value ? o.text : '';
+        const sp = document.createElement('span'); sp.textContent = v || '—'; sp.className = 'dxv' + (v ? '' : ' empty');
+        sel.replaceWith(sp);
+      });
+      return `<div class="gr-ms-snap gr-dx-snap">${t.outerHTML}</div>`;
+    }
+    function fillAnswerSnaps() {
+      const sub = (title, body) => `<div class="ans-sub"><div class="ans-sub-head"><b>${title}</b>${GR_LEGEND.replace('gr-ms-legend', 'gr-ms-legend lt')}</div>${body}</div><div class="ans-sep"></div>`;
+      const a = $id('ansMySheet'), b = $id('ansMyDx');
+      if (a) a.innerHTML = sub('✍️ 내가 쓴 답', mySheetSnapHtml());
+      if (b) b.innerHTML = sub('✍️ 내가 고른 답', myDxSnapHtml());
+    }
+    // 채점 시 청력도 카드 + 차폐 범위(플라토) 카드를 한꺼번에 둘러싼 파란 테두리를 한 번 점멸
+    function flashGradeFrame() {
+      const vis = ['.audiogram-card', '.wk-card'].map(s => document.querySelector(s))
+        .filter(el => el && el.offsetParent !== null && getComputedStyle(el).display !== 'none');
+      if (!vis.length) return;
+      const rs = vis.map(el => el.getBoundingClientRect());
+      const l = Math.min(...rs.map(r => r.left)), t = Math.min(...rs.map(r => r.top));
+      const r = Math.max(...rs.map(r => r.right)), b = Math.max(...rs.map(r => r.bottom));
+      document.querySelectorAll('.grade-frame').forEach(e => e.remove());
+      const f = document.createElement('div'); f.className = 'grade-frame';
+      const pad = 4;
+      f.style.left = (l + window.scrollX - pad) + 'px'; f.style.top = (t + window.scrollY - pad) + 'px';
+      f.style.width = (r - l + pad * 2) + 'px'; f.style.height = (b - t + pad * 2) + 'px';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 1250);
+    }
     function gradeAll(target) {
+      flashGradeFrame();
       const c = CASES[state.currentCase], T = c.trueThresholds, IA = getIA();
       const S = {
         acU: { name: '비차폐 기도 (O · X)', ok: 0, total: 0, fails: [] },
@@ -2442,19 +2599,24 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const A = S.acU, B = S.bcU;
       const AB = { ok: (A.auto ? 0 : A.ok) + (B.auto ? 0 : B.ok), total: (A.auto ? 0 : A.total) + (B.auto ? 0 : B.total), auto: A.auto && B.auto };
       const col = (label, x) => `<div><div class="gr-col-head"><b>${label}</b><span style="color:${x.auto ? '#64748b' : colorOf(pctOf(x))}">${x.auto ? '제외' : `${x.ok}/${x.total}`}</span></div>${bodyOf(x)}</div>`;
-      const unmaskedCard = `<div class="gr-sec">${head('비차폐 역치 (기도 · 골도)', AB)}<div class="gr-split">${col('기도 O · X', A)}${col('골도 &lt; &gt;', B)}</div></div>`;
+      // 차폐 문제처럼 비차폐가 미리 기입된 경우: 그 항목은 결과에서 아예 뺌
+      const unCols = [!A.auto && col('기도 O · X', A), !B.auto && col('골도 &lt; &gt;', B)].filter(Boolean);
+      const unmaskedCard = !unCols.length ? '' : unCols.length === 2
+        ? `<div class="gr-sec">${head('비차폐 역치 (기도 · 골도)', AB)}<div class="gr-split">${unCols.join('')}</div></div>`
+        : `<div class="gr-sec">${head(A.auto ? '비차폐 역치 (골도)' : '비차폐 역치 (기도)', AB)}${A.auto ? bodyOf(B) : bodyOf(A)}</div>`;
       // 차폐 후 참역치 · 차폐음 범위도 한 칸에 좌(참역치) · 우(범위)로
       const M = S.mSym, N = S.mRng;
       const MN = { ok: M.ok + N.ok, total: M.total + N.total };
       const maskedCard = `<div class="gr-sec">${head('차폐 결과 (참역치 · 차폐음 범위)', MN)}<div class="gr-split">${col('참역치 △ □ [ ]', M)}${col('범위표 · 필요 판단', N)}</div></div>`;
       // 난청 진단도 좌(좌측 귀) · 우(우측 귀)로
       const dxCard = `<div class="gr-sec">${head(S.dx.name, S.dx)}<div class="gr-split">${col('좌측 귀 (Lt)', S.dx.ears.LE)}${col('우측 귀 (Rt)', S.dx.ears.RE)}</div></div>`;
-      const secHtml = unmaskedCard + maskedCard + dxCard;
+      const secHtml = unmaskedCard + maskedCard + dxCard;   // '내가 쓴 차폐 범위표'는 정답지 보기에서 확인
       const noteHtml = notes.length ? `<div class="gr-notes"><b>참고 (감점 없음)</b><br>${notes.join('<br>')}</div>` : '';
       $id('gradeResult').innerHTML =
         `<div class="gr-total"><div class="gr-pct" style="color:${pct >= 90 ? '#86efac' : pct >= 60 ? '#fcd34d' : '#fca5a5'}">${pct}%</div>` +
         `<div class="gr-sub">문제 #${c.no} · ${okSum} / ${totSum} 항목 정답<br>채점 기준 ${state.phone === 'insert' ? 'Insert' : 'Supra'} IA ${IA} · 이번 세션 ${done.length}문제 평균 ${avg}%</div></div>` +
         secHtml + noteHtml;
+      fillAnswerSnaps();
       openPanel(target === 'answer' ? 'answer' : 'result');
     }
 
@@ -2466,28 +2628,35 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       tmp.setAttribute('style', 'width:100%; height:auto; display:block; background:#fff;');
       renderAudiogramGridBase(tmp, false);
       drawTrueAudiogramOverlay(tmp, true);
-      return `<div style="background-color:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px; margin-bottom:12px;">
+      const desc = `<div style="font-size:10.5px; color:#64748b; margin-bottom:8px; line-height:1.5;">비차폐 ○ ✕ &lt; &gt; (음영곡선 포함) + 차폐가 필요한 곳의 차폐 후 참역치 △ □ [ ] · NR은 최대 출력에 화살표</div>
+        <div style="max-width:420px; margin:0 auto; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden;">${tmp.outerHTML}</div>`;
+      // 폰: 차폐 연습이 주 목적이므로 접어 두고 눌러서 펼침 / PC: 기존처럼 항상 펼침
+      if (isPhone()) {
+        return `<details class="ans-pic" style="background-color:#f8fafc; border:1.5px solid #94a3b8; border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+        <summary style="cursor:pointer; font-weight:bold; color:#334155; font-size:13px;">🎯 정답 순음청력도 <span style="font-weight:600; font-size:11px; color:#64748b;">(눌러서 펼치기)</span></summary>
+        <div style="margin-top:8px;">${desc}</div>
+      </details>`;
+      }
+      return `<div style="background-color:#f8fafc; border:1.5px solid #94a3b8; border-radius:10px; padding:12px; margin-bottom:12px;">
         <div style="font-weight:bold; color:#334155; margin-bottom:2px; font-size:13px;">🎯 정답 순음청력도</div>
-        <div style="font-size:10.5px; color:#64748b; margin-bottom:8px; line-height:1.5;">비차폐 ○ ✕ &lt; &gt; (음영곡선 포함) + 차폐가 필요한 곳의 차폐 후 참역치 △ □ [ ] · NR은 최대 출력에 화살표</div>
-        <div style="max-width:420px; margin:0 auto; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden;">${tmp.outerHTML}</div>
+        ${desc}
       </div>`;
     }
 
     function diagBoxHtml(T) {
       const d = { RE: classifyEar(T, 'RE'), LE: classifyEar(T, 'LE') };
-      const cell = (e, fn) => `<td>${fn(d[e])}</td>`;
-      const row = (name, fn) => `<tr><td style="text-align:left; font-weight:700;">${name}</td>${cell('RE', fn)}${cell('LE', fn)}</tr>`;
-      return `<div style="background-color:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; padding:12px; margin-bottom:12px; overflow-x:auto;">
-        <div style="font-weight:bold; color:#6b21a8; margin-bottom:8px; font-size:13px;">🩺 ② 난청 진단 정답</div>
-        <table class="answer-table" style="border-color:#e9d5ff;">
-          <tr><th style="background-color:#f3e8ff; border-color:#e9d5ff;">구분</th><th style="background-color:#f3e8ff; border-color:#e9d5ff;"><span class="color-dot dot-red"></span>우측</th><th style="background-color:#f3e8ff; border-color:#e9d5ff;"><span class="color-dot dot-blue"></span>좌측</th></tr>
-          ${row('유형', x => TYPE_LABEL[x.type])}
-          ${row('정도 (WHO 4주파수 평균)', x => `${x.deg} <span style="color:#64748b; font-size:11px;">(${+x.pta.toFixed(2)} dB)</span>`)}
-          ${row('형태', x => CFG_LABEL[x.cfg])}
-        </table></div>`;
+      const row = (name, fn) => `<tr><td class="dx-row">${name}</td><td>${fn(d.LE)}</td><td>${fn(d.RE)}</td></tr>`;   // 입력표와 같은 좌측 | 우측 순서
+      return `<div class="ans-sub"><div class="ans-sub-head"><b>🎯 정답</b></div>
+        <div class="gr-ms-snap gr-dx-snap"><table class="dx-table">
+          <thead><tr><th></th><th><span class="color-dot dot-blue"></span>좌측 (Lt)</th><th><span class="color-dot dot-red"></span>우측 (Rt)</th></tr></thead>
+          <tbody>
+            ${row('난청 유형', x => TYPE_LABEL[x.type])}
+            ${row('난청 정도', x => `${x.deg} <span style="color:#64748b; font-size:10.5px;">(${+x.pta.toFixed(2)} dB)</span>`)}
+            ${row('청력도 형태', x => CFG_LABEL[x.cfg])}
+          </tbody></table></div></div>`;
     }
     function maskKeyHtml() {
-      const rows = MS_ROWS.map(([mode, noise, lab]) => {
+      const rows = MS_ROWS.map(([mode, noise, lab], ix) => {
         const te = noise === 'RE' ? 'LE' : 'RE';
         const tds = freqsList.map(f => {
           if (mode === 'bone' && f === 8000) return '<td style="background:#8a9099;"></td>';
@@ -2496,19 +2665,20 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
           if (m.kind === 'dilemma') return '<td style="background-color:#fee2e2; color:#991b1b; font-weight:800;">차폐<br>불가</td>';
           const soft = m.kind === 'dilemma_soft';
           const ex = mode === 'air' ? expAC(te, f, true) : expBCMask(te, f);
-          if (ex.nr) return `<td style="background-color:#e0e7ff; color:#3730a3; font-weight:800; line-height:1.3;">${soft ? '<span style="color:#9a3412;">차폐불가</span> 또는<br>' : ''}${m.winLo} · ${m.winLo + 5}<br><span style="font-size:9px; font-weight:600;">NR 시 차폐음 (5 dB씩 · 10 dB씩)</span></td>`;
-          if (m.answers && m.answers.length) return `<td style="background-color:${soft ? '#ffedd5' : '#fef9c3'}; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#9a3412;">차폐불가</span> 또는<br>' : ''}${m.answers.map(x => `<span title="IML ${x.method} · ${x.step} dB씩">${rangeText(x.a, x.b)}</span>`).join('<br>')}</td>`;
-          return `<td style="background-color:${soft ? '#ffedd5' : '#fef9c3'}; font-weight:700; line-height:1.3;">${soft ? '<span style="color:#9a3412;">차폐불가</span> 또는<br>' : ''}${m.winLo}~${m.maxEM > m.winHi ? m.winHi + '↑' : m.winHi}${m.kind === 'small' ? '<br><span style="font-size:9px; font-weight:600; color:#92400e;">small</span>' : ''}</td>`;
+          if (ex.nr) return `<td style="background-color:#fef9c3; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}<br>${m.winLo + 5}</td>`;
+          if (m.answers && m.answers.length) return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.answers.map(x => rangeText(x.a, x.b)).join('<br>')}</td>`;
+          return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.3;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}~${m.maxEM > m.winHi ? m.winHi + '↑' : m.winHi}${m.kind === 'small' ? '<br><span style="font-size:9px; font-weight:600; color:#92400e;">small</span>' : ''}</td>`;
         }).join('');
-        return `<tr><td><span class="color-dot ${noise === 'RE' ? 'dot-red' : 'dot-blue'}"></span>${mode} ${lab}</td>${tds}</tr>`;
+        return `<tr>${ix % 2 === 0 ? `<td rowspan="2" class="ms-grp">${mode}</td>` : ''}<td class="ms-ear ${noise === 'RE' ? 'rt' : 'lt'}">${lab}</td>${tds}</tr>`;
       }).join('');
-      return `<div style="background-color:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:12px; overflow-x:auto;">
-        <div style="font-weight:bold; color:#92400e; margin-bottom:8px; font-size:13px;">📝 ① 차폐음 범위 정답 (차폐음을 준 NTE 칸 기준)</div>
-        <table class="answer-table" style="border-color:#fde68a;">
-          <tr><th style="background-color:#fef3c7; border-color:#fde68a;">Masker 귀</th>${freqsList.map(f => `<th style="background-color:#fef3c7; border-color:#fde68a;">${MS_FQ[f]}</th>`).join('')}</tr>
+      const cols = '<col style="width:15%"><col style="width:9%"><col style="width:8%">' + freqsList.map(() => '<col style="width:11.33%">').join('');
+      const th = freqsList.map(f => `<th>${MS_FQ[f]}</th>`).join('');
+      return `<div class="ans-sub"><div class="ans-sub-head"><b>🎯 정답</b><span style="font-size:10.5px; color:#64748b;">차폐음을 준 NTE 칸 기준</span></div>
+        <div class="gr-ms-snap"><table class="ms-table ms-key"><colgroup>${cols}</colgroup><tbody>
+          <tr><td class="ms-corner" rowspan="5">Masking<br>level</td><th colspan="2"></th>${th}</tr>
           ${rows}
-        </table>
-        <div style="font-size:10px; color:#78716c; margin-top:6px; line-height:1.5;">노란 칸 = 실제 검사 절차로 나오는 차폐음 범위 정답(이 중 하나와 정확히 일치해야 정답). 톤은 비차폐 역치에서 시작, 초기 차폐음은 기도 <b>NTE ACT + 10</b> 또는 <b>TE ACT − IA + 10</b>(골도 NTE ACT + 10 + OE), 차폐음을 <b>5 dB씩 올려 연속 4회</b> 또는 <b>10 dB씩 올려 연속 3회</b> 반응했을 때의 마지막 차폐음이 최대 (차폐음이 최대 출력에 닿으면 그 값이 최대). 칸에 마우스를 올리면 어떤 방법의 답인지 표시. <b>차폐불가</b> = 마스킹 딜레마(10 dB 이상 plateau 불가), 파랑 숫자(NR 시 차폐음) = 차폐 후에도 무반응이라 plateau 확인 불가 → 톤이 최대 출력(NR)에 닿았을 때의 차폐음을 숫자 하나로 (차폐음을 5 dB씩 올린 값 · 10 dB씩 올린 값, 두 값 모두 정답), 주황 칸 = 차폐불가 또는 small plateau 모두 인정, <b>-</b> = 차폐 불필요(빈칸).</div>
+        </tbody></table></div>
+        <div style="font-size:10px; color:#78716c; margin-top:6px; line-height:1.5;">노란 칸 = 정답(여러 줄이면 그중 하나) · <b>-</b>(마이너스 기호) = 차폐 불필요</div>
       </div>`;
     }
 
@@ -2760,9 +2930,11 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         html += cur
           ? `<line x1="${x}" y1="40" x2="${x}" y2="460" stroke="${earColor()}" stroke-width="3" stroke-opacity="0.85" />`
           : inter
-            ? `<line x1="${x}" y1="40" x2="${x}" y2="460" stroke="#99f6e4" stroke-width="1" stroke-dasharray="3,3" />`
+            ? `<line x1="${x}" y1="40" x2="${x}" y2="460" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="4,3" />`   // 사이주파수: 주 눈금과 같은 색 점선
             : `<line x1="${x}" y1="40" x2="${x}" y2="460" class="grid-line-major" />`;
-        html += `<text x="${x}" y="28" text-anchor="middle" font-size="${cur ? 14 : (inter ? 9 : 11)}" font-weight="${cur ? 900 : 'bold'}" fill="${cur ? earColor() : (inter ? '#0d9488' : '#475569')}">${f}</text>`;
+        // 위쪽 주파수 글자는 주 주파수만 (사이주파수는 검사 중일 때만 위에 표시) · 사이주파수 글자는 아래에 작게
+        if (!inter || cur) html += `<text x="${x}" y="28" text-anchor="middle" font-size="${cur ? 14 : 11}" font-weight="${cur ? 900 : 'bold'}" fill="${cur ? earColor() : '#475569'}">${f}</text>`;
+        if (inter) html += `<text x="${x}" y="476" text-anchor="middle" font-size="9" font-weight="600" fill="${cur ? earColor() : '#94a3b8'}">${f >= 1000 ? (f / 1000) + 'k' : f}</text>`;
       });
       for (let db = -10; db <= 120; db += 5) {
         const y = yOf(db);
@@ -2786,6 +2958,12 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
 
     function clearAllSymbols() {
       state.plottedSymbols = [];
+      if (!isPresenting()) {                       // 조준선도 처음 위치(1 kHz · 40 dB HL)로
+        setFrequency(1000);
+        state.signalLevel = 40; state.nrTone = false;
+        if (typeof mSeqIdx !== 'undefined') { mSeqIdx = 0; mLast1k = null; }   // 폰 자동 이동 순서도 처음부터
+        clampSignal(); updateUI();
+      }
       renderPlottedSymbols();
     }
 
@@ -2918,11 +3096,14 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     try { uiMode = localStorage.getItem('pta-ui-mode') || 'auto'; } catch (e) {}
     const isPhone = () => document.documentElement.classList.contains('phone-mode');
     const naturalNarrow = () => Math.min(screen.width || 9999, window.outerWidth || 9999) <= 767;
+    const realPhone = () => Math.min(screen.width || 9999, screen.height || 9999) <= 767;   // 실제 폰: PC 화면(축소 보기)은 쓰지 않음
+    if (realPhone() && uiMode === 'pc') uiMode = 'auto';
     function applyUiMode() {
       const meta = document.querySelector('meta[name="viewport"]');
-      const phone = uiMode === 'phone' || (uiMode === 'auto' && naturalNarrow());
-      // 폰에서 PC 모드를 고르면 실제 PC처럼 넓은 화면을 축소해서 보여줌
-      const vp = (uiMode === 'pc' && (screen.width || 9999) < 1024) ? 'width=1300' : 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+      if (realPhone() && uiMode === 'pc') uiMode = 'auto';
+      const phone = realPhone() || uiMode === 'phone' || (uiMode === 'auto' && naturalNarrow());
+      // 폰에서는 항상 기기 폭 그대로 (예전의 'PC 화면 축소 보기'는 화면이 작게 굳는 문제가 있어 없앰)
+      const vp = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
       if (meta && meta.getAttribute('content') !== vp) meta.setAttribute('content', vp);
       const was = isPhone();
       document.documentElement.classList.toggle('phone-mode', phone);
@@ -2930,6 +3111,8 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       ['auto', 'pc', 'phone'].forEach(m => { const b = document.getElementById('uiMode-' + m); if (b) { b.classList.toggle('on', m === uiMode); b.setAttribute('aria-checked', String(m === uiMode)); } });
       if (typeof placePanel === 'function') { placePanel(); measureNav(); }
       if (was !== phone && typeof state !== 'undefined' && state.panelTab) closePanel();
+      // 정답지는 만들어질 때의 화면(PC/폰)에 맞춰 구성되므로(청력도 접기 버튼 등), 화면 방식이 바뀌면 다시 만들어 둔다
+      if (was !== phone && typeof updateTrueAnswerText === 'function') { try { updateTrueAnswerText(); } catch (e) {} }
     }
     function setUiMode(m) {
       uiMode = m;
@@ -2963,7 +3146,25 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const full = shell.parentElement.clientWidth;
       root.style.setProperty('--ag-phone', Math.round(Math.max(240, Math.min(full, avail))) + 'px');
     }
-    function measureNav() { document.documentElement.style.setProperty('--mnav-h', ($m('mNav').offsetHeight || 64) + 'px'); requestAnimationFrame(fitChart); }
+    // PC에서 폰 화면(기입표)을 볼 때: 청력도 + 입력표 + 하단 바가 스크롤 없이 한 화면에 들어오도록 청력도 크기를 계산
+    function fitMini() {
+      const root = document.documentElement;
+      if (!isPhone() || root.classList.contains('real-phone') || mView !== 'sheet') { root.style.removeProperty('--mini-h'); return; }
+      const card = document.querySelector('.wk-card'), wrap = $m('miniAg'); if (!card || !wrap) return;
+      root.style.setProperty('--mini-h', '0px');                       // 청력도를 0으로 두고 나머지 내용이 차지하는 높이를 잰다
+      const rest = card.getBoundingClientRect().bottom + window.scrollY + parseFloat(getComputedStyle(document.body).paddingBottom || 0);
+      const maxW = wrap.clientWidth - 8;
+      const h = Math.floor(Math.max(140, Math.min(maxW, window.innerHeight - rest - 2)));
+      root.style.setProperty('--mini-h', h + 'px');
+      const over = root.scrollHeight - window.innerHeight;             // 여백 등으로 아직 넘치면 넘친 만큼 더 줄임
+      if (over > 0 && h - over >= 140) root.style.setProperty('--mini-h', (h - over) + 'px');
+    }
+    function measureNav() { document.documentElement.style.setProperty('--mnav-h', ($m('mNav').offsetHeight || 64) + 'px'); requestAnimationFrame(() => { fitChart(); fitMini(); }); }
+    window.addEventListener('load', () => requestAnimationFrame(fitMini));
+    if (window.ResizeObserver) {                                       // 입력표 높이가 바뀌면(탭 전환 · 진단 계산 표시 등) 다시 맞춤
+      const ro = new ResizeObserver(() => requestAnimationFrame(fitMini));
+      ['wkPane-mask', 'wkPane-dx'].forEach(id => { const el = document.getElementById(id); if (el) ro.observe(el); });
+    }
     function mDot(view, pulse) {
       if (!isPhone() || mView === view) return;
       const t = $m('mTab-' + view); t.classList.add('has-dot');
@@ -3001,8 +3202,16 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     function mRecord() {
       if (isPresenting()) return;
       const sym = $m('mmSym').innerHTML, fTxt = $m('mmFreq').innerText, lv = $m('signalVal').innerText;   // 기록 버튼과 같은 색 기호
-      if (state.currentFreq === 1000) mLast1k = state.signalLevel;
+      const n0 = state.plottedSymbols.length, had = state.plottedSymbols.some(s => s.freq === state.currentFreq && s.symbol === state.activeSymbol && s.db === state.signalLevel);
       markCurrent();
+      // 같은 자리에 이미 있던 기호를 다시 누른 경우(지우기 · NR 화살표 떼기): 고치기만 하고 주파수·조준선은 그대로
+      //  NR 기호는 누를 때마다 기호+NR → 기호만 → 지움 → (다시 누르면 새로 기입하면서 다음 주파수로)
+      if (had) {
+        const now = state.plottedSymbols.find(s => s.freq === state.currentFreq && s.symbol === state.activeSymbol && s.db === state.signalLevel);
+        mToast(`<span class="mt-sym">${sym}</span> ${fTxt} · ${lv} dB ${now ? (now.nr ? 'NR 표시' : 'NR 화살표 뗌') : '지움'}`, true);
+        return;
+      }
+      if (state.currentFreq === 1000) mLast1k = state.signalLevel;
       mNextFreq();
       mToast(`<span class="mt-sym">${sym}</span> ${fTxt} · ${lv} dB 기록`, true);
       mDot('chart');
@@ -3051,6 +3260,12 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const panel = $m('sidePanel'), wrap = document.querySelector('.console-wrap');
       if (isPhone()) { if (panel.parentNode !== document.body) document.body.appendChild(panel); panel.classList.add('m-fixed'); }
       else { if (wrap && panel.parentNode !== wrap) wrap.appendChild(panel); panel.classList.remove('m-fixed'); }
+      // 채점하기 · 정답지 보기 · 기입 방법: 폰에서는 엄지가 닿는 하단 바(탭 바로 위)로, PC에서는 원래 우측 칼럼 맨 위로
+      const dock = document.querySelector('.gr-dock'), nav = $m('mNav'), stack = document.querySelector('.right-column-stack');
+      if (dock && nav && stack) {
+        if (isPhone()) { const tabs = nav.querySelector('.m-tabs'); if (dock.parentNode !== nav) nav.insertBefore(dock, tabs); }
+        else if (dock.parentNode !== stack) stack.insertBefore(dock, stack.firstChild);
+      }
     }
     (function initMobile() {
       // 새 문제 출제 시: 폰에서 청력도가 안 보이면 탭에 표시해 두었다가 열 때 점멸
@@ -3223,6 +3438,19 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       if (c.isMask) out.push(['mask', '차폐 문제 → 비차폐는 기입됨, <b>차폐 필요 주파수</b>부터 계산']);
       return out;
     }
+    // 이스터에그 주소: 누르면 클립보드에 복사하고 잠깐 '복사되었습니다.' 표시
+    function copyMail(btn, text) {
+      const done = () => {
+        if (btn.dataset.busy) return; btn.dataset.busy = '1';
+        const old = btn.textContent; btn.textContent = '복사되었습니다.'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); delete btn.dataset.busy; }, 1400);
+      };
+      const fallback = () => {
+        const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+        document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done();
+      };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+    }
     function renderPtChart(c) {
       const el = document.getElementById('ptChart'); if (!el || !c) return;
       const esc = s => String(s || '').replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
@@ -3232,7 +3460,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         const MAIL = 'ekacks@naver.com';
         const href = `mailto:${MAIL}?subject=${encodeURIComponent('[PTA 시뮬레이터] 고칠 점 제보')}&body=${encodeURIComponent(`문제 ${c.no || ''}에서 발견한 점:\n\n`)}`;
         el.innerHTML = `<span class="pc-tag">🩺 ${esc(c.who)}</span>` +
-          `<span class="pc-txt pc-r1" title="주소: ${MAIL}"><em>주소</em><a class="pc-mail" href="${href}">${MAIL}</a></span>` +
+          `<span class="pc-txt pc-r1"><em>주소</em><button type="button" class="pc-mail" title="눌러서 주소 복사" onclick="copyMail(this, '${MAIL}')">${MAIL}</button></span>` +
           `<span class="pc-txt pc-r2 pc-egg" title="고칠 점이 있다면 위 주소로 메일해주세요."><em>내용</em>고칠 점이 있다면 위 주소로 메일해주세요.</span>` +
           `<div class="pc-plan"><a class="pc-mailbtn" href="${href}" title="${MAIL} 로 메일 쓰기">📧<span class="pc-mailtxt"> 메일 보내기</span></a></div>`;
         return;
@@ -3287,6 +3515,16 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       }).observe(rd, { childList: true, characterData: true, subtree: true });
       renderPatient();
     })();
-  </script>
+  
+    // ---- 폰 기입표 화면의 작은 청력도: 본 청력도 내용을 그대로 복사(읽기 전용) ----
+    (function initMiniAg() {
+      const src = document.getElementById('audiogramSvg'), dst = document.getElementById('miniAgSvg');
+      if (!src || !dst) return;
+      let queued = false;
+      const copy = () => { queued = false; dst.innerHTML = src.innerHTML.replace(/\sid="([^"]+)"/g, ' data-mid="$1"'); };   // 중복 id 방지
+      new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(copy); } }).observe(src, { childList: true, subtree: true, attributes: true, characterData: true });
+      copy();
+    })();
+</script>
 </body>
 </html>
