@@ -1978,7 +1978,16 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const winLo = lo === null ? null : Math.max(lo, res.lo);
       const winW = (winLo === null || winLo > hi) ? -1 : hi - winLo;
       res.winLo = winLo; res.winHi = hi; res.winW = winW;
-      res.kind = winW < 10 ? 'dilemma' : res.formulaDilemma ? 'dilemma_soft' : winW < 15 ? 'small' : 'ok';
+      // 교수님 기준: 저차폐·과차폐가 아닌 실제 plateau 전체 [trueLo, winHi] 안이면 IML에서 시작하지 않아도 정답
+      //  하한은 '반응이 참역치로 안정되는 곳'과 '차폐음이 NTE 와우를 실제로 덮는 곳(톤이 NTE에 닿는 레벨 + NTE ABG)' 중 큰 값
+      //  (TE가 NTE와 같거나 더 좋은 귀면 노이즈 0에서도 역치가 같아 보이지만, 그건 NTE를 차폐한 게 아니므로 plateau가 아님)
+      const toneNTE = bone ? truth.db + res.oe : truth.db - res.IA;   // NR이면 최대 출력 톤 기준
+      const physLo = toneNTE === null ? 0 : Math.ceil(Math.max(0, toneNTE + res.nteABG) / 5) * 5;
+      res.physLo = Math.min(physLo, res.lo);   // 교재 IML에서 시작한 범위는 항상 인정되도록 IML보다 높이지는 않음
+      res.trueLo = lo === null ? null : Math.max(0, lo, res.physLo);
+      res.trueW = (lo === null || lo > hi) ? -1 : hi - res.trueLo;
+      res.keyKind = winW < 10 ? 'dilemma' : res.formulaDilemma ? 'dilemma_soft' : winW < 15 ? 'small' : 'ok';   // 정답지 표시용(기존 절차 기준)
+      res.kind = res.trueW < 10 ? 'dilemma' : res.formulaDilemma ? 'dilemma_soft' : winW < 15 ? 'small' : 'ok';
       res.dilemma = res.kind === 'dilemma';                                        // 확정 딜레마(plateau 불가)
       res.dilemmaAny = res.kind === 'dilemma' || res.kind === 'dilemma_soft';      // 딜레마 성격(채점 제외·D 인정)
       res.answers = plateauAnswers(res, bone, freq);                                // 실제 검사 절차로 나오는 정답 범위(최대 4개)
@@ -2301,7 +2310,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const row = ([mode, ear, lab], first) => {
         const cells = freqsList.map(f => (mode === 'bone' && f === 8000)
           ? '<td class="ms-gray"></td>'
-          : `<td class="ms-in" id="${msId(mode, ear, f)}-td"><input type="text" id="${msId(mode, ear, f)}" autocomplete="off" spellcheck="false" maxlength="9" aria-label="${mode === 'air' ? '기도' : '골도'} 차폐음 ${lab} ${f}Hz" oninput="msInput(this)"></td>`).join('');
+          : `<td class="ms-in" id="${msId(mode, ear, f)}-td"><input type="text" id="${msId(mode, ear, f)}" autocomplete="off" spellcheck="false" maxlength="9" aria-label="${mode === 'air' ? '기도' : '골도'} 차폐음 ${lab} ${f}Hz" oninput="msInput(this)" onfocus="msFocus(this)"></td>`).join('');
         const lead = first ? `<td rowspan="2" class="ms-grp">${mode === 'air' ? 'AC' : 'BC'}</td>` : '';
         return `<tr>${lead}<td class="ms-ear ${ear === 'RE' ? 'rt' : 'lt'}">${lab}</td>${cells}</tr>`;
       };
@@ -2348,6 +2357,15 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     }
     { const _rps = renderPlottedSymbols; renderPlottedSymbols = function () { _rps(); updateDxCalc(); syncQuickFlags(); }; }
 
+    // 기입칸을 누르면 그 칸의 검사 조건(기도/골도 · TE = 차폐음 귀의 반대쪽 · 주파수)으로 자동 전환 (차폐음 ON/OFF는 건드리지 않음)
+    function msFocus(el) {
+      const mt = el.id.match(/^ms-(air|bone)-(RE|LE)-(\d+)$/); if (!mt) return;
+      const [, mode, nte, f] = mt, te = nte === 'RE' ? 'LE' : 'RE';
+      if (state.transducer !== mode) { const sel = $id('transducerSelect'); if (sel) sel.value = mode; setTransducer(mode); }
+      if (state.targetEar !== te) setTargetEar(te);
+      if (state.currentFreq !== +f) setFrequency(+f);
+      if (typeof mSync === 'function') try { mSync(); } catch (e) {}
+    }
     function msInput(el) { const td = $id(el.id + '-td'); if (td) td.classList.remove('ok', 'bad'); }
 
     // 현재 검사 중인 주파수(열 제목)·차폐음 칸(NTE 줄)을 연하게 강조
@@ -2405,18 +2423,17 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     const winTxt = m => `${m.winLo} ~ ${m.maxEM > m.winHi ? m.winHi + '↑' : m.winHi}`;
     const rngExample = m => `${m.winLo}-${Math.min(m.winLo + 15, m.winHi)}`;
     function evalRange(m, p) {
-      const Lo = m.winLo, Hi = m.winHi, w = Hi - Lo;
+      const Lo = m.trueLo !== undefined && m.trueLo !== null ? m.trueLo : m.winLo, Hi = m.winHi, w = Hi - Lo;
       if (p.kind === 'empty') return { ok: false, msg: `범위 미기입` };
       if (p.kind === 'dilemma') return { ok: false, msg: `오답` };
       if (p.kind === 'nr' || p.kind === 'num') return { ok: false, msg: `오답` };
       if (p.kind === 'invalid') return { ok: false, msg: `형식 오류 — '최소-최대' 로 입력 (예 45-60)` };
       const mn = p.a, mx = p.b, width = mx - mn;
       if (mn > mx) return { ok: false, msg: `최소가 최대보다 큼 (${mn}-${mx})` };
-      if (mn < m.lo) return { ok: false, msg: `오답` };
-      if (mn < Lo) return { ok: false, msg: `오답` };
+      if (mn < Lo) return { ok: false, msg: `최소 ${mn} < ${Lo} → 저차폐` };
       if (mx > Hi) return { ok: false, msg: m.maxEM > Hi ? `최대 ${mx} > 차폐음 최대 출력 ${Hi} (그 이상은 NR로 올라가지 않음)` : `최대 ${mx} > 과차폐 한계 ${Hi} (TE BC + IA) → 과차폐` };
       // 15 dB plateau가 원칙. 단 학생이 보는 과차폐 한계(비차폐 BCT + IA)까지 15 dB가 안 되면 10 dB small plateau도 인정 (교재 BC Case 7)
-      const visRoom = (m.visMaxEM !== undefined ? m.visMaxEM : Hi) - Lo;
+      const visRoom = (m.visMaxEM !== undefined ? m.visMaxEM : Hi) - (m.winLo !== null && m.winLo !== undefined ? m.winLo : Lo);
       const need = (w >= 15 && visRoom >= 15) ? 15 : Math.min(10, w);
       if (width < need) return { ok: false, msg: `오답` };
       return { ok: true };
@@ -2564,8 +2581,9 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
           const ansTxt = m.answers.map(x => rangeText(x.a, x.b).replace('~', '-')).join(', ');
           const hit = (p.kind === 'range' && m.answers.some(x => x.a === p.a && x.b === p.b)) ||
                       (p.kind === 'num' && m.answers.some(x => x.a === x.b && x.a === p.v));
-          if (hit) { S.mRng.ok++; td.classList.add('ok'); }
-          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${input.value ? '내 답 ' + input.value + ' → 오답' : '범위 미기입'}`); }
+          const r2 = hit ? { ok: true } : evalRange(m, p);   // 절차로 나온 정답 외에도 plateau 안 15 dB(좁으면 10) 이상이면 정답
+          if (r2.ok) { S.mRng.ok++; td.classList.add('ok'); }
+          else { td.classList.add('bad'); S.mRng.fails.push(`${label} — ${input.value ? '내 답 ' + input.value + ' → ' + r2.msg : '범위 미기입'}`); }
           return;
         }
         const r = evalRange(m, p);
@@ -2675,12 +2693,12 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
           if (mode === 'bone' && f === 8000) return '<td style="background:#8a9099;"></td>';
           const m = computeMasking(te, f, mode);
           if (!m.needed) return '<td style="color:#cbd5e1;">-</td>';
-          if (m.kind === 'dilemma') return '<td style="background-color:#fee2e2; color:#991b1b; font-weight:800;">차폐<br>불가</td>';
-          const soft = m.kind === 'dilemma_soft';
+          if (m.keyKind === 'dilemma') return '<td style="background-color:#fee2e2; color:#991b1b; font-weight:800;">차폐<br>불가</td>';
+          const soft = m.keyKind === 'dilemma_soft';
           const ex = mode === 'air' ? expAC(te, f, true) : expBCMask(te, f);
           if (ex.nr) return `<td style="background-color:#fef9c3; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}<br>${m.winLo + 5}</td>`;
           if (m.answers && m.answers.length) return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.answers.map(x => rangeText(x.a, x.b)).join('<br>')}</td>`;
-          return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.3;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}~${m.maxEM > m.winHi ? m.winHi + '↑' : m.winHi}${m.kind === 'small' ? '<br><span style="font-size:9px; font-weight:600; color:#92400e;">small</span>' : ''}</td>`;
+          return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.3;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}~${m.maxEM > m.winHi ? m.winHi + '↑' : m.winHi}${m.keyKind === 'small' ? '<br><span style="font-size:9px; font-weight:600; color:#92400e;">small</span>' : ''}</td>`;
         }).join('');
         return `<tr>${ix % 2 === 0 ? `<td rowspan="2" class="ms-grp">${mode === 'air' ? 'AC' : 'BC'}</td>` : ''}<td class="ms-ear ${noise === 'RE' ? 'rt' : 'lt'}">${lab}</td>${tds}</tr>`;
       }).join('');
