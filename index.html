@@ -1079,7 +1079,7 @@
             <svg id="audiogramSvg" viewBox="0 0 500 500" style="width: 100%; height: 100%; cursor: crosshair;" onclick="handleAudiogramClick(event)"></svg>
           </div>
         </div>
-        <p id="agHint" class="ag-hint" title="기도 차폐 판단: TE ACT − IA ≥ NTE BCT (6k·8k는 NTE ACT) / 골도 차폐 판단: TE ABG ≥ 15 · TE = 검사 귀 · NTE = 비검사 귀 · IA = 이간감쇠">기도 차폐: TE ACT − IA(<span id="agHintIA" style="display:inline; margin:0; font-size:inherit; color:inherit; font-weight:inherit;">Supra 40</span>) ≥ NTE BCT · 골도 차폐: TE ABG ≥ 15</p>
+        <p id="agHint" class="ag-hint" title="기도 차폐 판단: TE ACT − IA ≥ NTE BCT 혹은 NTE ACT (BCT가 있으면 BCT 기준) / 골도 차폐 판단: TE ABG ≥ 15 · TE = 검사 귀 · NTE = 비검사 귀 · IA = 이간감쇠">기도 차폐: TE ACT − IA(<span id="agHintIA" style="display:inline; margin:0; font-size:inherit; color:inherit; font-weight:inherit;">Supra 40</span>) ≥ NTE BCT · 골도 차폐: TE ABG ≥ 15</p>
       </div>
 
       <!-- 차폐 범위표 / 난청 진단 (탭) -->
@@ -1125,9 +1125,9 @@
           <h4>기입 순서</h4>
           <ol>
             <li>양 귀 <b>비차폐 기도</b>(O·X) → <b>비차폐 골도</b>(&lt; &gt;, 좋은 쪽 귀 값)</li>
-            <li>차폐 필요 판단 — AC: <b>TE ACT − IA ≥ NTE BCT</b> (6·8 kHz는 <b>NTE ACT</b>) · BC: <b>TE ABG ≥ 15</b> (8 kHz 골도 제외)</li>
+            <li>차폐 필요 판단 — AC: <b>TE ACT − IA ≥ NTE BCT 혹은 NTE ACT</b> (BCT가 있으면 BCT 기준) · BC: <b>TE ABG ≥ 15</b></li>
             <li>초기 차폐음 — AC: <b>NTE ACT + 10</b> 또는 <b>TE ACT − IA + 10</b> · BC: <b>NTE ACT + 10 + OE</b></li>
-            <li>plateau method — 톤은 비차폐 역치에서 시작, 반응하면 차폐음 ↑, 무반응이면 톤 5 dB ↑. <b>5 dB씩 연속 4회</b> 또는 <b>10 dB씩 연속 3회</b> 반응 시 종료 → 연속 반응이 시작된 차폐음 ~ 마지막 차폐음</li>
+            <li>차폐 범위 — <b>plateau</b>를 입력하면 정답. plateau = 차폐음을 올려도 계속 반응하는 구간으로, 차폐음을 <b>5 dB씩 올려 연속 4번</b> 또는 <b>10 dB씩 올려 연속 3번</b> 반응하면 됨(<b>15 dB 이상</b>, 공간이 좁으면 10 dB <b>small plateau</b>). 또한 <b>저차폐·과차폐가 일어나지 않는 선</b>에서 차폐 범위를 구할 시 정답이 인정됨</li>
             <li>차폐 후 역치(△ □ [ ])는 청력도에, <b>차폐음 범위는 NTE 칸</b>에 기입</li>
             <li>유형·정도·형태 진단 → 채점</li>
           </ol>
@@ -1919,7 +1919,7 @@
         if (tone >= nteBC) phys = tone + nteABG;
         cands = (nteABG >= 15 && phys > 0) ? [minA, phys] : [minA];   // OE 기준과 동일하게 교재 기준(ABG ≥ 15) 적용
       } else {
-        needed = (teUAC - IA) >= (acOnly(freq) ? nteUAC : nteUBC);   // 6k·8k: TE ACT − IA ≥ NTE ACT
+        needed = (teUAC - IA) >= (acOnly(freq) ? nteUAC : nteUBC);   // 교재: NTE BCT 혹은 NTE ACT — BCT가 있으면 BCT, 골도가 없는 8k만 ACT
         minA = nteUAC + 10;                                     // ② NTE AC + 10
         minB = teUAC - IA + 10;                                 // ③ TE - IA + 10
         const cap = AC_MAX[freq];
