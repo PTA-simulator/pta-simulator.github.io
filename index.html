@@ -1902,9 +1902,9 @@
       const nteUBC = Math.min(nteBC, teBC);
       const nteABG = Math.max(0, nteAC - nteBC);      // NTE의 실제 전도성 요소
       const oe = nteABG < 15 ? getOE(freq) : 0;    // 실제 폐쇄효과(환자 반응 계산용): NTE 중이가 정상일 때만 생김
-      // 학생이 청력도에서 보는 NTE ABG = NTE 비차폐 기도 − 비차폐 골도(좋은 쪽 와우 값). IML 판단(OE 넣기 · −30 방법 허용)은 이 값으로
+      // 학생이 청력도에서 보는 NTE ABG = NTE 비차폐 기도 − 비차폐 골도(좋은 쪽 와우 값). 기도 IML의 −30 방법 허용 여부는 이 값으로
       const visABG = Math.max(0, nteUAC - nteUBC);
-      const oeIml = visABG < 15 ? getOE(freq) : 0;  // 교재 기준: 보이는 NTE ABG ≥ 15면 OE 미적용
+      const oeIml = getOE(freq);                    // 수업 기준: 골도 IML = NTE ACT + 10(SV) + OE (NTE가 전음성이어도 OE를 빼지 않음, 과차폐 주의)
 
       const maxEM = teBC + IA;
       const maxCap = maxEM >= 120 ? 120 : maxEM;
@@ -1931,7 +1931,7 @@
       }
 
       // 정답 범위의 하한 = 교재 IML (학생이 청력도에서 계산할 수 있는 값). 물리적 필요량(phys)은 상한 쪽에만 반영
-      //  골도: NTE ACT + 10 + OE(보이는 NTE ABG ≥ 15면 OE 없음) / 기도: NTE ACT + 10, 보이는 NTE ABG < 10이면 −30 방법도 허용(둘 중 작은 값)
+      //  골도: NTE ACT + 10 + OE (항상) / 기도: NTE ACT + 10, 보이는 NTE ABG < 10이면 −30 방법도 허용(둘 중 작은 값)
       const imlLo = mode === 'bone' ? minA : (visABG >= 10 ? minA : Math.min(minA, minB));
       let lo = imlLo, hi = Math.max(...cands, phys);
       lo = Math.max(0, Math.min(lo, maxCap));
