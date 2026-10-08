@@ -182,6 +182,7 @@
     .nte-ind.lit { background:linear-gradient(180deg,#fff0c9,#fbd47d); border:1px solid #d9a32b; color:#7a4d00; box-shadow:inset 0 2px 4px rgba(120,80,0,.2); transform:none; }
     .am-route .grid-2 .key { width:100%; min-width:0; justify-content:center; align-items:center; text-align:center; padding-left:8px; padding-right:8px; }
     .am-route .grid-2 .nte-ind { justify-content:center; align-items:center; text-align:center; }
+    #ear-RE, #ear-LE, #nte-RE, #nte-LE { font-family:inherit; font-size:14px; font-weight:700; letter-spacing:.06em; }   /* TE·NTE의 Rt/Lt: 왼쪽 라벨(TEST EAR)과 같은 글꼴 */
     .mask-key.pb-key { flex:2; flex-direction:column; gap:2px; padding:9px 12px 11px; border-radius:12px; }
     .mask-key .pb-main { font:800 15px -apple-system,"Segoe UI",sans-serif; letter-spacing:.04em; white-space:nowrap; }
     .mask-key .pb-sub { font-size:9px; letter-spacing:.1em; color:#8a5a00; }
@@ -278,7 +279,7 @@
     .gr-dock .btn-main { flex:1.5; grid-column:1 / span 2; background-color:#4f46e5; border-color:#4338ca; }
     .gr-dock .btn-sub { background:#fff; color:#475569; border-color:#cbd5e1; }
     .gr-dock .btn-sub:hover { background:#f1f5f9; }
-    /* '🎲 새 문제 출제'(헤더)와 같은 노란 버튼 스타일 */
+    /* '🌱 새 문제 출제'(헤더)와 같은 노란 버튼 스타일 */
     .gr-dock .btn.btn-gold { background-color:#facc15; color:#1e293b; border:2px solid #fde047; font-weight:bold; font-size:14px; border-radius:8px; padding:8px 4px; }
     /* '전체 지우기'(청력도)와 같은 스타일 */
     .gr-dock .btn.btn-retry { font-size:11px; font-weight:bold; color:#ef4444; border:1px solid #fca5a5; background-color:#fef2f2; border-radius:6px; }
@@ -366,6 +367,14 @@
       100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); background-color: inherit; }                                            /* 천천히 꺼짐 */
     }
     .audiogram-card.ag-flash { animation: agFlash 1.2s linear; }
+    /* 출제 알림: '전체 지우기' 바로 아래(같은 세로줄·같은 크기)에 사이주파수 ON/OFF 배지 — 청력도 노란 테두리와 같은 속도(1.2초)로 점멸 */
+    .ag-right { position:relative; flex:none; display:flex; }
+    .ag-right .ag-inter { display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); height:100%; box-sizing:border-box; z-index:5;
+      align-items:center; justify-content:center; border-radius:6px; font-size:10.5px; letter-spacing:-.03em; font-weight:bold; line-height:1; white-space:nowrap; pointer-events:none; }
+    .ag-right .ag-inter.on { background:#ccfbf1; color:#0f766e; border:1px solid #5eead4; }
+    .ag-right .ag-inter.off { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+    .ag-right .ag-inter.show { display:flex; animation: agInterFade 2.1s linear forwards; }
+    @keyframes agInterFade { 0% { opacity:1; box-shadow:0 0 0 3px rgba(250,204,21,.6); } 57% { opacity:1; box-shadow:0 0 0 0 rgba(250,204,21,0); } 71% { opacity:1; } 100% { opacity:0; } }   /* 테두리와 함께 켜짐 → 1.5초 유지 → 사라짐 */
     /* 채점 알림: 청력도 + 차폐 범위(플라토) 영역 전체를 감싸는 파란 테두리 점멸 (출제 때 노란 점멸과 같은 방식) */
     @keyframes gradeFrameFlash {
       0%   { opacity: 1; box-shadow: 0 0 0 4px rgba(56,189,248,0.9), 0 0 22px 6px rgba(56,189,248,0.5), inset 0 0 0 3px rgba(56,189,248,0.9); background-color: rgba(56,189,248,0.10); }
@@ -431,7 +440,7 @@
     html.phone-mode .side-panel.m-fixed .sp-tabs { display:none !important; }
     html.phone-mode .side-panel.m-fixed .sp-head { padding:6px 8px; }
     html.phone-mode .side-panel.m-fixed .sp-close { margin-left:auto; }
-    /* 헤더 한 줄로 압축: 출제 유형 + 🎲 + 🔉 */
+    /* 헤더 한 줄로 압축: 출제 유형 + 🌱 + 🚫 */
     html.phone-mode header { padding: 6px 0 !important; }
     html.phone-mode header .title-group { display:none !important; }
     html.phone-mode .header-container { padding: 0 8px !important; }
@@ -633,7 +642,7 @@
     .pc-txt em { font-style:normal; font-weight:800; color:#64748b; margin-right:5px; }
     .pc-no { flex:none; font-size:10.5px; font-weight:700; color:#94a3b8; }
     .pc-plan { flex:none; position:static; }
-    .pc-plan summary { cursor:pointer; list-style:none; user-select:none; font-size:10.5px; font-weight:800; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:7px; padding:1px 7px; white-space:nowrap; }
+    .pc-plan summary { cursor:pointer; list-style:none; user-select:none; font-size:12px; font-weight:800; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:4px 10px; white-space:nowrap; line-height:1.3; }
     .pc-plan summary::-webkit-details-marker { display:none; }
     .pc-plan[open] summary { background:#4f46e5; border-color:#4f46e5; color:#fff; }
     /* 펼친 체크 목록은 레이아웃을 밀지 않고 카드 아래에 떠서 표시 */
@@ -644,7 +653,13 @@
     .pc-plan li.pc-ear { background:#eef2ff; border-color:#c7d2fe; }
     .pc-plan li.pc-me, .pc-plan li.pc-mask { background:#fffbeb; border-color:#fde68a; }
     .pc-plan li.pc-dead { background:#fef2f2; border-color:#fecaca; }
-    /* 문제 표시: 종류는 아이콘(🎲 기본 · 🔉 차폐)만 왼쪽에, 몇 번째인지가 가운데 — 한 줄 높이 */
+    /* 펼치면 아래 피검자 그림 칸 크기 그대로 그 위에 덮어서 크게 표시 (그림 칸이 안 보이는 화면에서는 기존처럼 카드 아래) */
+    .pc-plan ul.on-stage { right:auto; flex-direction:column; flex-wrap:nowrap; justify-content:flex-start; gap:6px; padding:12px 14px; overflow:visible;
+      border:2px solid #818cf8; border-radius:14px; background:rgba(255,255,255,.97); box-shadow:0 14px 34px rgba(15,23,42,.22); animation:planIn .16s ease-out; }
+    .pc-plan ul.on-stage::before { content:'📋 검사 전 체크 — 이 피검자는 이렇게 검사해요'; font-size:13.5px; font-weight:800; color:#3730a3; margin-bottom:1px; }
+    .pc-plan ul.on-stage li { font-size:13.5px; line-height:1.4; padding:7px 12px; border-radius:10px; flex:none; }
+    @keyframes planIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    /* 문제 표시: 종류는 아이콘(🌱 기본 · 🚫 차폐)만 왼쪽에, 몇 번째인지가 가운데 — 한 줄 높이 */
     /* 문제 표시: '문제 N'만 칸 정중앙 · 작고 단정하게 */
     .ag-head h3 .ag-no { display:inline-flex !important; align-items:center; justify-content:center; height:22px; min-width:76px !important;
       padding:0 10px !important; line-height:1; vertical-align:middle; box-sizing:border-box; }
@@ -666,7 +681,7 @@
     .pt-chart .pc-mail { all:unset; cursor:copy; color:#4338ca; font-weight:700; border-bottom:1px dashed #a5b4fc; }
     .pt-chart .pc-mail:hover { color:#312e81; border-bottom-color:#4338ca; }
     .pt-chart .pc-mail.copied { color:#15803d; border-bottom-color:transparent; }
-    .pt-chart .pc-mailbtn { display:inline-block; text-decoration:none; font-size:10.5px; font-weight:800; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:7px; padding:1px 7px; white-space:nowrap; }
+    .pt-chart .pc-mailbtn { display:inline-block; text-decoration:none; font-size:12px; font-weight:800; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:4px 10px; white-space:nowrap; line-height:1.3; }
     .pt-chart .pc-mailbtn:hover { background:#4f46e5; border-color:#4f46e5; color:#fff; }
     .pt-chart .pc-egg { font-size:10.5px; letter-spacing:-.01em; }
     @media (max-width: 1279px) {   /* 좁은 화면: 이스터에그 카드에서는 나이 배지를 아이콘만 남겨 주소·내용이 다 보이게 */
@@ -742,8 +757,8 @@
             <option value="dilemma">차폐불가 연습 (양측 전음성 · 혼합성 · 편측 전음성)</option>
           </optgroup>
         </select>
-        <button id="randomCaseBtn" onclick="newRandomCase(); this.blur();" title="난청 유형·정도·형태를 숨긴 새 문제를 출제합니다" style="background-color: #facc15; color: #1e293b; border: 2px solid #fde047; font-weight: bold; font-size: 14px; padding: 8px 14px; border-radius: 8px; white-space: nowrap;">🎲 새로운 문제</button>
-        <button id="maskCaseBtn" onclick="newMaskingCase(); this.blur();" title="비차폐 기도·골도 역치가 미리 기입된 채로 출제합니다 (차폐 연습용)" style="background-color: #facc15; color: #1e293b; border: 2px solid #fde047; font-weight: bold; font-size: 14px; padding: 8px 14px; border-radius: 8px; white-space: nowrap;">🔉 차폐 문제</button>
+        <button id="maskCaseBtn" onclick="newMaskingCase(); this.blur();" title="비차폐 기도·골도 역치가 미리 기입된 채로 출제합니다 (차폐 연습용)" style="background-color: #facc15; color: #1e293b; border: 2px solid #fde047; font-weight: bold; font-size: 14px; padding: 8px 14px; border-radius: 8px; white-space: nowrap;">🚫 차폐 문제</button>
+        <button id="randomCaseBtn" onclick="newRandomCase(); this.blur();" title="난청 유형·정도·형태를 숨긴 새 문제를 출제합니다" style="background-color: #facc15; color: #1e293b; border: 2px solid #fde047; font-weight: bold; font-size: 14px; padding: 8px 14px; border-radius: 8px; white-space: nowrap;">🌱 새로운 문제</button>
         <button class="ui-mode-m" onclick="setUiMode('pc')" title="PC 화면으로 전환"><svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><rect x="1.5" y="2.5" width="13" height="8.5" rx="1.3"/><path d="M6 14h4M8 11v3"/></svg><span>PC</span></button>
       </div>
     </div>
@@ -910,19 +925,38 @@
     .ms-table .ms-corner { text-align:left; padding-left:9px; font-size:13px; line-height:1.25; font-weight:600; }
     .ms-table th { font-weight:600; font-size:13px; }
     .ms-table th.cur-col { background:#fef3c7; font-weight:900; color:#92400e; }
+    .ms-table th.cur-col.nte-rt { background:#fee2e2; color:#dc2626; }   /* 현재 주파수 열 제목 = 차폐음 귀(NTE) 색 */
+    .ms-table th.cur-col.nte-lt { background:#dbeafe; color:#2563eb; }
     .ms-table td.ms-grp { font-weight:600; }
     .ms-table td.ms-ear { font-weight:800; }
     .ms-table td.rt { color:#b91c1c; } .ms-table td.lt { color:#1d4ed8; }
     .ms-table td.ms-gray { background:#8a9099; }
-    .ms-table td.ms-in { padding:0; }
+    .ms-table td.ms-in { padding:0; position:relative; }
+    /* 칸 왼쪽 위 주황 삼각형: 누르면 '차폐불가' 입력/해제 */
+    .ms-table td.ms-in .ms-dil { position:absolute; left:0; top:0; width:14px; height:14px; padding:0; border:0; margin:0; cursor:pointer; z-index:2;
+      background:linear-gradient(135deg, #f97316 0 50%, transparent 50% 100%); opacity:.55; }
+    .ms-table td.ms-in .ms-dil:hover { opacity:1; }
+    .ms-table td.ms-in.dil-on .ms-dil { opacity:1; }
+    html.phone-mode .ms-table td.ms-in .ms-dil { width:20px; height:20px; }
+    body.sp-open .ms-table td.ms-in .ms-dil { display:none; }
+    .ms-table td.ms-in.dil-on input { font-size:11px; letter-spacing:-.08em; padding:0 6px; }
+    html.phone-mode .ms-table td.ms-in.dil-on input { font-size:9px; padding:0 2px; }
     .ms-table td.ms-in input { width:100%; height:40px; border:0; outline:none; background:transparent; text-align:center; font:700 12px ui-monospace,Menlo,Consolas,monospace; color:#111827; padding:0 1px; letter-spacing:-.04em; }
     .ms-table td.ms-in input:focus { background:#eef2ff; box-shadow:inset 0 0 0 2px #6366f1; }
     .ms-table td.cur-cell { background:#fffbeb; box-shadow:inset 0 0 0 2px #f59e0b; }   /* 지금 검사 중인 칸: 노란 테두리 */
     .ms-table td.ok { background:#bbf7d0; }      /* 채점: 정답 = 초록 */
     .ms-table td.bad { background:#fecaca; }     /* 채점: 오답 = 빨강 */
     .ms-table td.cur-cell.ok, .ms-table td.cur-cell.bad { box-shadow:inset 0 0 0 2px #f59e0b; }   /* 채점 색이 우선, 테두리만 유지 */
+    /* 현재 칸 · 입력 중인 칸 = 차폐음이 나오는 귀(NTE)의 색: 우측 빨강 · 좌측 파랑 */
+    .ms-table td.cur-cell[id*="-RE-"] { background:#fef2f2; box-shadow:inset 0 0 0 2px #ef4444; }
+    .ms-table td.cur-cell[id*="-LE-"] { background:#eff6ff; box-shadow:inset 0 0 0 2px #3b82f6; }
+    .ms-table td.cur-cell.ok[id] { background:#bbf7d0; }   /* 채점 색(초록·빨강)이 우선, 테두리만 귀 색 */
+    .ms-table td.cur-cell.bad[id] { background:#fecaca; }
+    .ms-table td.ms-in[id*="-RE-"] input:focus, .ms-table td.ms-in[id*="-LE-"] input:focus { background:transparent; box-shadow:none; }
+    .ms-table td.ms-in[id*="-RE-"]:focus-within { background:#fee2e2; box-shadow:inset 0 0 0 2px #dc2626; }   /* 입력 중: 조금 더 진하게 */
+    .ms-table td.ms-in[id*="-LE-"]:focus-within { background:#dbeafe; box-shadow:inset 0 0 0 2px #2563eb; }
     /* 채점 결과 · 정답지를 보는 동안에는 노란 안내선(현재 주파수 열 · 입력 칸)을 끄고 정답/오답 색만 보이게 (패널을 닫으면 다시 노랗게) */
-    body.sp-open .ms-table th.cur-col { background:#fff; font-weight:600; color:#111827; }
+    body.sp-open .ms-table th.cur-col, body.sp-open .ms-table th.cur-col.nte-rt, body.sp-open .ms-table th.cur-col.nte-lt { background:#fff; font-weight:600; color:#111827; }
     body.sp-open .ms-table td.cur-cell { box-shadow:none !important; }
     body.sp-open .ms-table td.cur-cell:not(.ok):not(.bad):not(.ms-gray) { background:#fff !important; }
     .ms-table td.ok input, .ms-table td.bad input { background:transparent !important; }
@@ -1072,7 +1106,7 @@
       <div class="card audiogram-card">
         <div class="ag-head">
           <h3><span class="ag-nav"><button id="probPrev" class="ag-arrow" onclick="goProblem(-1)" aria-label="이전 문제" title="이전 문제">‹</button><em id="agProblemNo" class="ag-no" title="현재 문제 번호 (프로그램을 열면 문제 1이 자동 출제)">문제 1</em><button id="probNext" class="ag-arrow" onclick="goProblem(1)" aria-label="다음 문제" title="다음 문제 (이미 출제된 문제만)">›</button></span>순음 청력도<b id="symbolCount" style="display:none;">0</b></h3>
-          <button onclick="clearAllSymbols()" class="ag-clear">전체 지우기</button>
+          <div class="ag-right"><button onclick="clearAllSymbols()" class="ag-clear">전체 지우기</button><span id="agInterBadge" class="ag-inter" aria-live="polite"></span></div>
         </div>
         <div class="audiogram-shell">
           <div class="audiogram-frame" style="border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; background: white;">
@@ -1094,7 +1128,7 @@
         </div>
         <div id="wkPane-mask" class="wk-pane">
           <div class="ms-wrap" id="maskSheetWrap"></div>
-          <p class="ms-note ms-howto">차폐가 필요한 칸에는 plateau 구간을 <b>최소-최대</b>로 적습니다 (예: 15-30). 차폐 중 톤이 최대 출력(NR)에 닿아 더 올릴 수 없는데도 무반응이면, <b>그때 주고 있던 차폐음을 최대 차폐음으로 보고 숫자 하나만</b> 적습니다 (예: 75). 마스킹 딜레마로 plateau를 만들 수 없으면 <b>차폐불가</b> 또는 <b>-</b>(마이너스 기호)라고 적습니다. 차폐가 필요 없는 칸은 비워 둡니다.</p>
+          <p class="ms-note ms-howto">차폐가 필요한 칸에는 plateau 구간을 <b>최소-최대</b>로 적습니다 (예: 15-30). 차폐를 구하는 도중 제시음이 최대에 달하여 더 이상 plateau를 구할 수 없다면 <b>그 순간의 차폐음을 최대 차폐음으로 보고 숫자 하나로</b> 입력합니다 (예: 75). 마스킹 딜레마로 plateau를 만들 수 없으면 칸 왼쪽 위 <b style="color:#ea580c;">주황 삼각형</b>을 눌러 <b>차폐불가</b>로 표시합니다 (다시 누르면 지워짐). 차폐가 필요 없는 칸은 비워 둡니다.</p>
         </div>
         <div id="wkPane-dx" class="wk-pane hidden">
           <table class="dx-table">
@@ -1135,7 +1169,7 @@
           <ul>
             <li>차폐음을 <b>제시한 귀(NTE)의 칸</b>에 검사 귀가 반응한 차폐음 범위를 <kbd>최소-최대</kbd>로 (예: <kbd>45-60</kbd>)</li>
             <li>Rt 줄 = 우측 귀에 소음을 준 경우(= 좌측이 검사 귀)</li>
-            <li>차폐가 필요 없는 칸은 <b>빈칸</b>, plateau가 불가능하면 <kbd>차폐불가</kbd> 또는 <kbd>-</kbd>(마이너스 기호), 차폐해도 검사 귀가 끝까지 무반응(NR)이면 plateau를 확인할 수 없으므로 톤이 최대 출력(NR)에 도달했는데도 무반응이던 <b>그 순간의 차폐음</b>을 숫자 하나로 (예: <kbd>75</kbd>)</li>
+            <li>차폐가 필요 없는 칸은 <b>빈칸</b>, plateau가 불가능하면 칸 왼쪽 위 <b style="color:#ea580c;">주황 삼각형</b>을 눌러 <b>차폐불가</b> 표시, 차폐를 구하는 도중 제시음이 최대에 달하여 더 이상 plateau를 구할 수 없다면 <b>그 순간의 차폐음</b>을 최대 차폐음으로 보고 숫자 하나로 입력 (예: <kbd>75</kbd>)</li>
             <li>골도 8 kHz는 검사하지 않아 회색. 채점은 <b>현재 선택된 이어폰의 IA</b> 기준</li>
           </ul>
           <h4>난청 진단 기준</h4>
@@ -1160,6 +1194,7 @@
     const freqsList = [250, 500, 1000, 2000, 4000, 8000];                          // 주 주파수(옥타브) — 차폐 plateau 계산은 이 주파수만
     const interList = [750, 1500, 3000, 6000];                                      // 사이주파수(inter-octave)
     const allFreqs  = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000];   // 전체(오름차순)
+    const ALL_FREQS_ = allFreqs;
     const INTER_NEIGHBORS = { 750:[500,1000], 1500:[1000,2000], 3000:[2000,4000], 6000:[4000,8000] };   // 사이주파수 양옆 옥타브
     const INTER_GAP = 20;                                                          // 양옆 옥타브 AC 역치 차 ≥ 20 dB 이면 사이주파수 검사 필요
     const isInter = f => interList.includes(f);
@@ -1207,7 +1242,9 @@
       const [lo, hi] = INTER_NEIGHBORS[f];
       return Math.abs(Math.min(T[ear].AC[lo], 120) - Math.min(T[ear].AC[hi], 120));
     }
-    const interNeeded = (T, ear, f) => interGap(T, ear, f) >= INTER_GAP;
+    // 차폐 문제는 차폐만 연습 → 사이주파수는 아예 다루지 않음(미리 기입·정답지·주파수 이동 모두 제외)
+    const isMaskCase = () => !!(typeof CASES !== 'undefined' && CASES[state.currentCase] && CASES[state.currentCase].isMask);
+    const interNeeded = (T, ear, f) => !isMaskCase() && interGap(T, ear, f) >= INTER_GAP;
 
     // ====================== 랜덤 문제 생성기 ======================
     let problemNo = 0;
@@ -1486,6 +1523,15 @@
       card.classList.remove('ag-flash'); void card.offsetWidth; card.classList.add('ag-flash');
       card.querySelectorAll('.ag-newbadge').forEach(b => b.remove());   // 가운데 안내 글은 청력도를 가리므로 띄우지 않음 (점멸만)
       setTimeout(() => card.classList.remove('ag-flash'), 1200);        // 갑자기 켜져 1.2초에 걸쳐 사라짐
+      // 새 문제 = 사이주파수 ON / 차폐 문제 = 사이주파수 OFF 를 제목 옆에 점멸
+      const bd = document.getElementById('agInterBadge');
+      if (bd) {
+        const off = /차폐/.test(label) || isMaskCase();
+        bd.textContent = off ? '사이주파수 OFF' : '사이주파수 ON';
+        bd.className = 'ag-inter ' + (off ? 'off' : 'on');
+        void bd.offsetWidth; bd.classList.add('show');
+        clearTimeout(bd._t); bd._t = setTimeout(() => bd.classList.remove('show'), 2150);
+      }
     }
     function retryProblem() { changeCase(state.currentCase); }
 
@@ -1582,7 +1628,7 @@
       updateQuickButtons();
     }
     // 차폐 문제: 새 문제를 낸 뒤 비차폐 기도(○ ✕)·골도(< >)를 미리 기입한 채로 시작
-    function newMaskingCase() { flashSkip = true; newRandomCase(); flashSkip = false; CASES[state.currentCase].isMask = true; updProblemNo(); autoPlot('ac'); autoPlot('bc'); flashAudiogram(`차폐 문제 ${problemNo} 출제`); }
+    function newMaskingCase() { flashSkip = true; newRandomCase(); flashSkip = false; CASES[state.currentCase].isMask = true; if (isInter(state.currentFreq)) setFrequency(1000); updateTrueAnswerText(); updProblemNo(); autoPlot('ac'); autoPlot('bc'); flashAudiogram(`차폐 문제 ${problemNo} 출제`); }
     function toast(msg) {
       let t = document.getElementById('toast');
       if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed; left:50%; top:78px; transform:translateX(-50%); background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:10px; padding:8px 14px; font-size:12px; z-index:100; box-shadow:0 4px 14px rgba(0,0,0,.2); max-width:90vw;'; document.body.appendChild(t); }
@@ -1616,6 +1662,8 @@
       const c = CASES[state.currentCase];
       const IA = getIA();
       const T = c.trueThresholds;
+      if (typeof updateFreqButtons === 'function') updateFreqButtons();
+      const allFreqs = c.isMask ? ALL_FREQS_.filter(f => !isInter(f)) : ALL_FREQS_;   // 차폐 문제: 사이주파수 열 없음
       const earKo = e => e === 'RE' ? '우측' : '좌측';
       const noBC = f => f === 8000 || isInter(f);
       const INTER_TH = 'background-color:#ccfbf1; color:#115e59; border-color:#5eead4;';
@@ -1769,13 +1817,14 @@
     })();
 
     function updateFreqButtons() {
-      [8000, ...interList].forEach(f => {      // 골도: 8000Hz·사이주파수는 검사 안 함
+      [8000, ...interList].forEach(f => {      // 골도: 8000Hz·사이주파수는 검사 안 함 / 차폐 문제: 사이주파수 안 함
         const b = document.getElementById(`freq-${f}`);
-        b.disabled = isBone();
-        b.style.opacity = isBone() ? '0.3' : '1';
-        b.style.cursor = isBone() ? 'not-allowed' : 'pointer';
-        b.tabIndex = isBone() ? -1 : 0;
-        b.title = isBone() ? '골도는 사이주파수·8000 Hz를 검사하지 않음' : '';
+        const off = isBone() || (isMaskCase() && isInter(f));
+        b.disabled = off;
+        b.style.opacity = off ? '0.3' : '1';
+        b.style.cursor = off ? 'not-allowed' : 'pointer';
+        b.tabIndex = off ? -1 : 0;
+        b.title = isBone() ? '골도는 사이주파수·8000 Hz를 검사하지 않음' : off ? '차폐 문제에서는 사이주파수를 검사하지 않음' : '';
       });
     }
 
@@ -1795,6 +1844,7 @@
     function setFrequency(f) {
       if (isPresenting()) return;
       if (isBone() && !boneOK(f)) return;     // BC는 8000Hz·사이주파수 검사 안 함
+      if (isMaskCase() && isInter(f)) return;  // 차폐 문제는 사이주파수 없음
       if (f !== state.currentFreq) resetResponseDisplay();
       state.currentFreq = f;
       document.querySelectorAll('.fq-chip').forEach(b => b.classList.remove('active'));
@@ -2310,7 +2360,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const row = ([mode, ear, lab], first) => {
         const cells = freqsList.map(f => (mode === 'bone' && f === 8000)
           ? '<td class="ms-gray"></td>'
-          : `<td class="ms-in" id="${msId(mode, ear, f)}-td"><input type="text" id="${msId(mode, ear, f)}" autocomplete="off" spellcheck="false" maxlength="9" aria-label="${mode === 'air' ? '기도' : '골도'} 차폐음 ${lab} ${f}Hz" oninput="msInput(this)" onfocus="msFocus(this)"></td>`).join('');
+          : `<td class="ms-in" id="${msId(mode, ear, f)}-td"><input type="text" id="${msId(mode, ear, f)}" autocomplete="off" spellcheck="false" maxlength="9" aria-label="${mode === 'air' ? '기도' : '골도'} 차폐음 ${lab} ${f}Hz" oninput="msInput(this)" onfocus="msFocus(this)"><button type="button" class="ms-dil" tabindex="-1" title="차폐불가 (다시 누르면 지움)" aria-label="차폐불가 입력/해제" onmousedown="event.preventDefault()" onclick="msDilToggle('${msId(mode, ear, f)}')"></button></td>`).join('');
         const lead = first ? `<td rowspan="2" class="ms-grp">${mode === 'air' ? 'AC' : 'BC'}</td>` : '';
         return `<tr>${lead}<td class="ms-ear ${ear === 'RE' ? 'rt' : 'lt'}">${lab}</td>${cells}</tr>`;
       };
@@ -2366,18 +2416,25 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       if (state.currentFreq !== +f) setFrequency(+f);
       if (typeof mSync === 'function') try { mSync(); } catch (e) {}
     }
-    function msInput(el) { const td = $id(el.id + '-td'); if (td) td.classList.remove('ok', 'bad'); }
+    function msDilToggle(id) {
+      const el = $id(id); if (!el) return;
+      el.value = parseRange(el.value).kind === 'dilemma' ? '' : '차폐불가';
+      msInput(el);
+      if (document.activeElement === el) el.blur();
+    }
+    function msInput(el) { const td = $id(el.id + '-td'); if (td) { td.classList.remove('ok', 'bad'); td.classList.toggle('dil-on', parseRange(el.value).kind === 'dilemma'); } }
 
     // 현재 검사 중인 주파수(열 제목)·차폐음 칸(NTE 줄)을 연하게 강조
     function highlightMaskCell() {
       document.querySelectorAll('.ms-table .cur-col, .ms-table .cur-cell').forEach(e => e.classList.remove('cur-col', 'cur-cell'));
-      const h = $id(`ms-h-${state.currentFreq}`); if (h) h.classList.add('cur-col');
+      const h = $id(`ms-h-${state.currentFreq}`); if (h) { h.classList.add('cur-col'); h.classList.toggle('nte-rt', state.targetEar === 'LE'); h.classList.toggle('nte-lt', state.targetEar === 'RE'); }
       const nte = state.targetEar === 'RE' ? 'LE' : 'RE';
       const td = $id(`${msId(isBone() ? 'bone' : 'air', nte, state.currentFreq)}-td`); if (td) td.classList.add('cur-cell');
     }
 
     function resetPractice() {
       document.querySelectorAll('.ms-table input').forEach(el => { el.value = ''; });
+      document.querySelectorAll('.ms-table td.dil-on').forEach(td => td.classList.remove('dil-on'));
       document.querySelectorAll('.ms-table td.ok, .ms-table td.bad, #dxBody td.ok, #dxBody td.bad').forEach(td => td.classList.remove('ok', 'bad'));
       document.querySelectorAll('#dxBody select').forEach(el => { el.value = ''; });
       const r = $id('gradeResult'); if (r) r.innerHTML = '<div class="sp-empty">아직 채점하지 않았어요.<br>위의 <b>✅ 채점하기</b> 버튼을 누르면 바로 채점됩니다.</div>';
@@ -2386,6 +2443,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     // 차폐 범위표(plateau) 입력값과 채점 색 표시만 지움 (청력도 기호·진단·결과는 유지)
     function clearPlateau() {
       document.querySelectorAll('.ms-table input').forEach(el => { el.value = ''; });
+      document.querySelectorAll('.ms-table td.dil-on').forEach(td => td.classList.remove('dil-on'));
       document.querySelectorAll('.ms-table td.ok, .ms-table td.bad').forEach(td => td.classList.remove('ok', 'bad'));
       setWorkTab('mask');
     }
@@ -2431,7 +2489,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const mn = p.a, mx = p.b, width = mx - mn;
       if (mn > mx) return { ok: false, msg: `최소가 최대보다 큼 (${mn}-${mx})` };
       if (mn < Lo) return { ok: false, msg: `최소 ${mn} < ${Lo} → 저차폐` };
-      if (mx > Hi) return { ok: false, msg: m.maxEM > Hi ? `최대 ${mx} > 차폐음 최대 출력 ${Hi} (그 이상은 NR로 올라가지 않음)` : `최대 ${mx} > 과차폐 한계 ${Hi} (TE BC + IA) → 과차폐` };
+      if (mx > Hi) return { ok: false, msg: m.maxEM > Hi ? `최대 ${mx} > 차폐음 최대 출력 ${Hi} (그 이상은 올릴 수 없음)` : `최대 ${mx} > 과차폐 한계 ${Hi} (TE BC + IA) → 과차폐` };
       // 15 dB plateau가 원칙. 단 학생이 보는 과차폐 한계(비차폐 BCT + IA)까지 15 dB가 안 되면 10 dB small plateau도 인정 (교재 BC Case 7)
       const visRoom = (m.visMaxEM !== undefined ? m.visMaxEM : Hi) - (m.winLo !== null && m.winLo !== undefined ? m.winLo : Lo);
       const need = (w >= 15 && visRoom >= 15) ? 15 : Math.min(10, w);
@@ -2447,6 +2505,8 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const t = src.cloneNode(true), ins = src.querySelectorAll('input');
       t.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));            // 중복 id 방지
       t.querySelectorAll('.cur-col, .cur-cell').forEach(e => e.classList.remove('cur-col', 'cur-cell'));
+      t.querySelectorAll('.ms-dil').forEach(e => e.remove());
+      t.querySelectorAll('.dil-on').forEach(e => e.classList.remove('dil-on'));
       t.querySelectorAll('input').forEach((inp, i) => {
         const v = ins[i].value.trim();
         const sp = document.createElement('span'); sp.textContent = v || '—'; if (!v) sp.className = 'empty';
@@ -2620,7 +2680,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       sessionScores[c.no] = pct;
       const done = Object.keys(sessionScores), avg = Math.round(done.reduce((a, k) => a + sessionScores[k], 0) / done.length);
       const colorOf = p => p >= 90 ? '#16a34a' : p >= 60 ? '#d97706' : '#dc2626';
-      const bodyOf = x => x.auto ? '<div class="gr-empty" style="color:#64748b;">🔉 미리 기입되어 채점 제외</div>' : x.fails.length ? `<ul class="gr-fails">${x.fails.map(t => `<li>${t}</li>`).join('')}</ul>`
+      const bodyOf = x => x.auto ? '<div class="gr-empty" style="color:#64748b;">🚫 미리 기입되어 채점 제외</div>' : x.fails.length ? `<ul class="gr-fails">${x.fails.map(t => `<li>${t}</li>`).join('')}</ul>`
           : `<div class="gr-empty">${x.total ? '모두 정답 ✓' : '채점 대상 없음 ✓'}</div>`;
       const pctOf = x => x.total ? Math.round(100 * x.ok / x.total) : 100;
       const scoreTxt = x => x.auto ? '제외' : `${x.ok}/${x.total} · ${pctOf(x)}%`;
@@ -2659,7 +2719,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       tmp.setAttribute('style', 'width:100%; height:auto; display:block; background:#fff;');
       renderAudiogramGridBase(tmp, false);
       drawTrueAudiogramOverlay(tmp, true);
-      const desc = `<div style="font-size:10.5px; color:#64748b; margin-bottom:8px; line-height:1.5;">비차폐 ○ ✕ &lt; &gt; (음영곡선 포함) + 차폐가 필요한 곳의 차폐 후 참역치 △ □ [ ] · NR은 최대 출력에 화살표</div>
+      const desc = `<div style="font-size:10.5px; color:#64748b; margin-bottom:8px; line-height:1.5;">비차폐 ○ ✕ &lt; &gt; (음영곡선 포함) + 차폐가 필요한 곳의 차폐 후 참역치 △ □ [ ] · NR(무반응)은 최대 출력 위치에 화살표</div>
         <div style="max-width:420px; margin:0 auto; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden;">${tmp.outerHTML}</div>`;
       // 폰: 차폐 연습이 주 목적이므로 접어 두고 눌러서 펼침 / PC: 기존처럼 항상 펼침
       if (isPhone()) {
@@ -3007,7 +3067,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
        Enter      : 현재 주파수·dB에 기호 기록(마킹)
        Delete     : 현재 주파수·dB의 선택된 종류 기호 삭제   */
     function stepFreq(d) {
-      const list = isBone() ? allFreqs.filter(boneOK) : allFreqs;
+      const list = isBone() ? allFreqs.filter(boneOK) : isMaskCase() ? allFreqs.filter(f => !isInter(f)) : allFreqs;
       const i = list.indexOf(state.currentFreq);
       const j = i + d;
       // 막다른 곳(최저/최고)에서 한 번 더 누르면 1000 Hz로 복귀 (신뢰도 검사용 1k 재검사 편의)
@@ -3059,6 +3119,32 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     document.addEventListener('keydown', (e) => {
       if (e.target && e.target.matches && e.target.matches('.ms-table input') && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.target.blur(); }
     });
+    // 차폐 범위 입력 칸: 다 쓴 값(00-00 · 차폐불가 · - · 숫자 하나)이 들어 있으면 방향키를 누를 때 입력 모드를 풀고
+    //  그 방향키를 그대로 검사 조작(←/→ 주파수, ↑/↓ 음압, Shift+←/→ 차폐음)으로 넘김
+    const msDone = v => { const p = parseRange(v); return p.kind === 'dilemma' || p.kind === 'num' || (p.kind === 'range' && p.a <= p.b); };
+    document.addEventListener('keydown', (e) => {
+      const el = e.target;
+      if (!(el && el.matches && el.matches('.ms-table input')) || !e.key.startsWith('Arrow') || e.ctrlKey || e.metaKey || e.altKey) return;
+      const pass = () => {
+        if (document.activeElement !== el || !msDone(el.value)) return false;
+        el.blur();
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code, shiftKey: e.shiftKey, bubbles: true, cancelable: true }));
+        return true;
+      };
+      if (e.isComposing) { setTimeout(pass, 0); return; }     // 한글 입력(차폐불가) 조합 중이면 조합이 끝난 뒤 처리
+      if (msDone(el.value)) { e.preventDefault(); pass(); }
+    }, true);
+    // 다 쓰면 입력 모드(파란 테두리)를 자동으로 풀기: 00-00(최대 ≥ 최소, 5 dB 단위) · 차폐불가 · - (숫자 하나는 범위를 쓰는 중일 수 있어 Enter/방향키로 끝냄)
+    //  쓰는 중인 값(예: 40-5, 40-10 → 40-100)은 아직 풀지 않음
+    const msAuto = v => {
+      const p = parseRange(v);
+      if (p.kind === 'dilemma') return true;
+      if (p.kind === 'range') return p.a >= 0 && p.a % 5 === 0 && p.b % 5 === 0 && p.b >= p.a && p.b >= 10;   // 50-50처럼 같은 값도 완료
+      return false;
+    };
+    const msAutoBlur = el => { if (document.activeElement === el && msAuto(el.value)) setTimeout(() => { if (document.activeElement === el && msAuto(el.value)) el.blur(); }, 150); };
+    document.addEventListener('input', (e) => { const el = e.target; if (el && el.matches && el.matches('.ms-table input') && !e.isComposing) msAutoBlur(el); });
+    document.addEventListener('compositionend', (e) => { const el = e.target; if (el && el.matches && el.matches('.ms-table input')) msAutoBlur(el); });
     // 포커스된 버튼이 스페이스 keyup으로 클릭되는 것을 막음
     document.addEventListener('keyup', (e) => {
       if (e.key === ' ' || e.key === 'Spacebar') {
@@ -3302,7 +3388,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       // 새 문제 출제 시: 폰에서 청력도가 안 보이면 탭에 표시해 두었다가 열 때 점멸
       const _flash = flashAudiogram;
       flashAudiogram = function (label) {
-        if (isPhone() && mView !== 'chart') { mPendingFlash = label; mDot('chart', true); mToast('🎲 ' + label); return; }
+        if (isPhone() && mView !== 'chart') { mPendingFlash = label; mDot('chart', true); mToast((/차폐/.test(label) ? '🚫 ' : '🌱 ') + label); return; }
         _flash(label);
       };
       // 콘솔 값이 바뀔 때마다 미니 바 갱신
@@ -3503,6 +3589,22 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         `<span class="pc-txt pc-r2" title="병력: ${hist}"><em>병력</em>${hist}</span>` +
         `<details class="pc-plan"><summary title="병력을 보고 무엇부터 할지 확인">📋 검사 전 체크</summary><ul>${chips}</ul></details>`;
     }
+    // 검사 전 체크: 펼치면 피검자 그림 칸 위에 같은 크기로 덮어 표시 / 바깥을 누르면 닫힘
+    function placePlan(d) {
+      const ul = d && d.querySelector('ul'), st = document.getElementById('ptStage');
+      if (!ul) return;
+      ['left', 'top', 'width', 'height', 'minHeight'].forEach(k => ul.style[k] = '');
+      ul.classList.remove('on-stage');
+      if (!d.open || !st || st.offsetParent === null || !ul.offsetParent) return;
+      const pr = ul.offsetParent.getBoundingClientRect(), sr = st.getBoundingClientRect();
+      if (sr.width < 120 || sr.height < 80) return;
+      ul.classList.add('on-stage');
+      ul.style.left = (sr.left - pr.left) + 'px'; ul.style.top = (sr.top - pr.top) + 'px';
+      ul.style.width = sr.width + 'px'; ul.style.minHeight = sr.height + 'px';   // 항목이 많으면 스크롤 없이 아래로 늘어남
+    }
+    document.addEventListener('toggle', e => { if (e.target.matches && e.target.matches('details.pc-plan')) placePlan(e.target); }, true);
+    window.addEventListener('resize', () => document.querySelectorAll('details.pc-plan[open]').forEach(placePlan));
+    document.addEventListener('click', e => { document.querySelectorAll('details.pc-plan[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
     function renderPatient() {
       const st = document.getElementById('ptStage'), c = CASES[state.currentCase];
       if (!st || !c) return;
