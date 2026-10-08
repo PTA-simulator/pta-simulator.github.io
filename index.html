@@ -351,6 +351,13 @@
     .pt-stage svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
     .pt-breathe { animation: ptBreathe 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
     .pt-torso { animation: ptChest 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+    /* 불쾌 수준(UCL) 이상의 소리가 그 귀에 나가는 동안: 그쪽 눈을 찡그림 ( > < 모양 + 찌푸린 눈썹) */
+    .pt-pain { display:none; }
+    .pt-stage.pain-RE .pt-pain-RE, .pt-stage.pain-LE .pt-pain-LE { display:inline; }
+    .pt-stage.pain-RE .pt-eye-RE, .pt-stage.pain-LE .pt-eye-LE, .pt-stage.pain-RE .pt-brow-RE, .pt-stage.pain-LE .pt-brow-LE { display:none; }
+    .pt-mouth-pain { display:none; }
+    .pt-stage.pain-RE .pt-mouth-pain, .pt-stage.pain-LE .pt-mouth-pain { display:inline; }
+    .pt-stage.pain-RE .pt-mouth, .pt-stage.pain-LE .pt-mouth { display:none; }
     .pt-eyes { animation: ptBlink 5.5s infinite; transform-box: fill-box; transform-origin: 50% 50%; }
     @keyframes ptBreathe { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.6px); } }
     @keyframes ptChest { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.012,1.035); } }
@@ -2297,6 +2304,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       Aud.toneOff();                               // 떼면 순음 정지
       clearTimeout(holdTimer); holdTimer = null;
       cancelAnimationFrame(holdRAF);
+      if (typeof patientSync === 'function') patientSync();   // 떼는 순간 찡그림 해제
       const disp = document.getElementById('responseDisplay');
       disp.style.backgroundImage = 'none'; disp.style.textShadow = 'none'; disp.style.boxShadow = 'none';
       if (!holdDone) {                              // 0.35초 전에 뗌 → 반응/기록 없음
@@ -2868,10 +2876,13 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
 
     // 골도 기호는 주파수 선 위가 아니라 옆에 기입: 우측 골도(< [)는 선의 왼쪽, 좌측 골도(> ])는 선의 오른쪽
     //  예) 한 주파수에서  [ < O > ]  (우차폐골 · 우비차폐골 · 기도 · 좌비차폐골 · 좌차폐골)
-    const BC_SIDE_OFFSET = 14;
+    const BC_SIDE_OFFSET = 18.5 * 0.85;      // 비차폐 골도 < > : 주파수 선 가까이
+    const BC_MASK_OFFSET = 22 * 0.85;     // [ ]는 < >에 바싹 붙임(선끼리 닿아도 됨) → 옆 주파수 침범 최소화      // 차폐 골도 [ ] : 그보다 바깥 → [ < ○ > ] 순서로 겹치지 않게
     function symX(sym, x) {
-      if (sym === 'BC_UNMASKED_R' || sym === 'BC_MASKED_R') return x - BC_SIDE_OFFSET;
-      if (sym === 'BC_UNMASKED_L' || sym === 'BC_MASKED_L') return x + BC_SIDE_OFFSET;
+      if (sym === 'BC_UNMASKED_R') return x - BC_SIDE_OFFSET;
+      if (sym === 'BC_UNMASKED_L') return x + BC_SIDE_OFFSET;
+      if (sym === 'BC_MASKED_R') return x - BC_MASK_OFFSET;
+      if (sym === 'BC_MASKED_L') return x + BC_MASK_OFFSET;
       return x;
     }
     // 비차폐 골도(우·좌 합침): 선 왼쪽에 빨강 <, 오른쪽에 파랑 > 를 함께 그림 (NR이면 화살표도 양쪽)
@@ -2881,17 +2892,23 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       if (nr) h += nrArrow(xr, y, RED, 'BC_UNMASKED_R') + nrArrow(xl, y, BLUE, 'BC_UNMASKED_L');
       return h;
     }
-    function symbolSvg(sym, x, y, color) {
+    // 청력도 기호 전체 크기 배율 (기호·NR 화살표·골도 기호 간격을 함께 줄임)
+    const SYM_SCALE = 0.85;
+    const symScaleWrap = (x, y, inner) => `<g transform="translate(${x} ${y}) scale(${SYM_SCALE}) translate(${-x} ${-y})">${inner}</g>`;
+    function symbolSvg(sym, x, y, color) { return sym === 'BC_UNMASKED' ? symbolSvgRaw(sym, x, y, color) : symScaleWrap(x, y, symbolSvgRaw(sym, x, y, color)); }   // < > 묶음은 안에서 각각 축소
+    function symbolSvgRaw(sym, x, y, color) {
       switch (sym) {
         case 'BC_UNMASKED': return bcUnmaskedSvg(x, y, false);
-        case 'O': return `<circle cx="${x}" cy="${y}" r="6" stroke="${color}" stroke-width="2.5" fill="none" />`;
-        case 'X': return `<line x1="${x-6}" y1="${y-6}" x2="${x+6}" y2="${y+6}" stroke="${color}" stroke-width="2.5"/><line x1="${x+6}" y1="${y-6}" x2="${x-6}" y2="${y+6}" stroke="${color}" stroke-width="2.5"/>`;
-        case 'TRIANGLE': return `<polygon points="${x},${y-7} ${x-7},${y+6} ${x+7},${y+6}" stroke="${color}" stroke-width="2.5" fill="none"/>`;
-        case 'SQUARE': return `<rect x="${x-6}" y="${y-6}" width="12" height="12" stroke="${color}" stroke-width="2.5" fill="none"/>`;
-        case 'BC_UNMASKED_R': return `<path d="M ${x+5} ${y-7} L ${x-4} ${y} L ${x+5} ${y+7}" stroke="${color}" stroke-width="2.5" fill="none"/>`;
-        case 'BC_UNMASKED_L': return `<path d="M ${x-5} ${y-7} L ${x+4} ${y} L ${x-5} ${y+7}" stroke="${color}" stroke-width="2.5" fill="none"/>`;
-        case 'BC_MASKED_R': return `<path d="M ${x+5} ${y-7} L ${x-3} ${y-7} L ${x-3} ${y+7} L ${x+5} ${y+7}" stroke="${color}" stroke-width="2.5" fill="none"/>`;
-        case 'BC_MASKED_L': return `<path d="M ${x-5} ${y-7} L ${x+3} ${y-7} L ${x+3} ${y+7} L ${x-5} ${y+7}" stroke="${color}" stroke-width="2.5" fill="none"/>`;
+        case 'O': return `<circle cx="${x}" cy="${y}" r="8.5" stroke="${color}" stroke-width="2.2" fill="none" />`;   // 혼자 있을 때의 ○ (작게)
+        case 'O_FULL': return `<circle cx="${x}" cy="${y}" r="11" stroke="${color}" stroke-width="2.2" fill="none" />`;   // △가 안에 겹치지 않고 들어가는 크기
+        case 'X_FULL': return `<line x1="${x-10}" y1="${y-10}" x2="${x+10}" y2="${y+10}" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/><line x1="${x+10}" y1="${y-10}" x2="${x-10}" y2="${y+10}" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/>`;   // □ 안에 겹치지 않고 들어가는 크기
+        case 'X': return `<line x1="${x-7.8}" y1="${y-7.8}" x2="${x+7.8}" y2="${y+7.8}" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/><line x1="${x+7.8}" y1="${y-7.8}" x2="${x-7.8}" y2="${y+7.8}" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/>`;   // 혼자 있을 때의 ✕ (작게)
+        case 'TRIANGLE': return `<polygon points="${x},${y-11} ${x-9.5},${y+5.5} ${x+9.5},${y+5.5}" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" fill="none"/>`;   // ○ 안에 들어가는 크기
+        case 'SQUARE': return `<rect x="${x-10}" y="${y-10}" width="20" height="20" stroke="${color}" stroke-width="2.2" fill="none"/>`;   // ✕가 안에 겹치지 않고 들어가는 크기
+        case 'BC_UNMASKED_R': return `<path d="M ${x+3} ${y-7} L ${x-4} ${y} L ${x+3} ${y+7}" stroke="${color}" stroke-width="2.5" fill="none"/>`;   // 기호 선택 버튼과 같은 각도
+        case 'BC_UNMASKED_L': return `<path d="M ${x-3} ${y-7} L ${x+4} ${y} L ${x-3} ${y+7}" stroke="${color}" stroke-width="2.5" fill="none"/>`;
+        case 'BC_MASKED_R': return `<path d="M ${x+6} ${y-9.5} L ${x-2} ${y-9.5} L ${x-2} ${y+9.5} L ${x+6} ${y+9.5}" stroke="${color}" stroke-width="2.4" fill="none"/>`;   // < 를 품는 [ (닿아도 밖으로는 안 나옴)
+        case 'BC_MASKED_L': return `<path d="M ${x-6} ${y-9.5} L ${x+2} ${y-9.5} L ${x+2} ${y+9.5} L ${x-6} ${y+9.5}" stroke="${color}" stroke-width="2.4" fill="none"/>`;   // > 를 품는 ]
       }
       return '';
     }
@@ -2899,10 +2916,11 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     // NR 화살표: 기호에 직접 붙여 그림 (♂ 모양). 우측 기호(○ < [ △)는 ↙, 좌측 기호(✕ > ] □)는 ↘
     //  - 부착점: ○ 원의 아래쪽 바깥 · ✕ 아래쪽 끝 · < > 아래쪽 획 · [ ] 아래쪽 모서리 · △ 아래 꼭짓점 · □ 아래 모서리
     const NR_ANCHOR = {
-      O: [-4.2, 4.2], X: [6, 6], TRIANGLE: [-7, 6], SQUARE: [6, 6],
-      BC_UNMASKED_R: [0.5, 3.5], BC_UNMASKED_L: [-0.5, 3.5], BC_MASKED_R: [-3, 7], BC_MASKED_L: [3, 7]
+      O: [-6, 6], O_FULL: [-7.8, 7.8], X: [7.8, 7.8], X_FULL: [10, 10], TRIANGLE: [-9.5, 5.5], SQUARE: [10, 10],
+      BC_UNMASKED_R: [0.5, 3.5], BC_UNMASKED_L: [-0.5, 3.5], BC_MASKED_R: [-2, 9.5], BC_MASKED_L: [2, 9.5]
     };
-    function nrArrow(x, y, color, sym) {
+    function nrArrow(x, y, color, sym) { return symScaleWrap(x, y, nrArrowRaw(x, y, color, sym)); }
+    function nrArrowRaw(x, y, color, sym) {
       const dir = color === RED ? -1 : 1;
       const [ox, oy] = NR_ANCHOR[sym] || [dir * 6, 6];
       const ax = x + ox, ay = y + oy, len = 11, h = 6;
@@ -2948,8 +2966,10 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         if (it.sym === 'BC_UNMASKED') html = bcUnmaskedSvg(FREQ_X[it.f], y, it.e.nr);
         else {
           const x = symX(it.sym, FREQ_X[it.f]);
-          html = symbolSvg(it.sym, x, y, it.color);
-          if (it.e.nr) html += nrArrow(x, y, it.color, it.sym);
+          const hasAt = s2 => items.some(o => o.sym === s2 && o.f === it.f && o.e.db === it.e.db);
+          const sym = it.sym === 'X' && (hasAt('O') || hasAt('SQUARE')) ? 'X_FULL' : it.sym === 'O' && (hasAt('TRIANGLE') || hasAt('X')) ? 'O_FULL' : it.sym;
+          html = symbolSvg(sym, x, y, it.color);
+          if (it.e.nr) html += nrArrow(x, y, it.color, sym);
         }
         svg.innerHTML += `<g opacity="${solid ? 1 : 0.32}">${html}</g>`;
       });
@@ -3004,8 +3024,11 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
           } else {
             const blue = ['X', 'SQUARE', 'BC_MASKED_L'].includes(item.symbol);
             const color = blue ? BLUE : RED;
-            html = symbolSvg(item.symbol, x, baseY, color);
-            if (item.nr) html += nrArrow(x, baseY, color, item.symbol);
+            const has = s2 => items.some(o => o.symbol === s2);
+            const sym = item.symbol === 'X' && (has('O') || has('SQUARE')) ? 'X_FULL'
+                      : item.symbol === 'O' && (has('TRIANGLE') || has('X')) ? 'O_FULL' : item.symbol;   // ✕·○는 혼자면 작게, 다른 기호와 겹치면 원래 크기
+            html = symbolSvg(sym, x, baseY, color);
+            if (item.nr) html += nrArrow(x, baseY, color, sym);
           }
           svg.innerHTML += `<g class="symbol-badge">${html}</g>`;
         });
@@ -3477,10 +3500,14 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         <ellipse cx="${L}" cy="${hy + 4}" rx="7" ry="11" fill="${skinD}"/>
         <ellipse cx="${R}" cy="${hy + 4}" rx="7" ry="11" fill="${skinD}"/>
         <ellipse cx="${cx}" cy="${hy}" rx="${rx}" ry="${ry}" fill="${skin}"/>
-        <g class="pt-eyes"><circle cx="${cx - eyeDx}" cy="${eyeY}" r="3.4" fill="#1f2937"/><circle cx="${cx + eyeDx}" cy="${eyeY}" r="3.4" fill="#1f2937"/></g>
-        <path d="M${cx - eyeDx - 6},${eyeY - 10} q6,-4 12,0 M${cx + eyeDx - 6},${eyeY - 10} q6,-4 12,0" stroke="${V.hair === 'bald' || V.hair === 'bun' ? '#9ca3af' : hairD}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <g class="pt-eyes"><circle class="pt-eye pt-eye-RE" cx="${cx - eyeDx}" cy="${eyeY}" r="3.4" fill="#1f2937"/><circle class="pt-eye pt-eye-LE" cx="${cx + eyeDx}" cy="${eyeY}" r="3.4" fill="#1f2937"/></g>
+        <g class="pt-pain pt-pain-RE"><path d="M${cx - eyeDx - 5},${eyeY - 4} L${cx - eyeDx + 3},${eyeY} L${cx - eyeDx - 5},${eyeY + 4}" stroke="#1f2937" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M${cx - eyeDx - 7},${eyeY - 13} L${cx - eyeDx + 6},${eyeY - 8}" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round"/></g>
+        <g class="pt-pain pt-pain-LE"><path d="M${cx + eyeDx + 5},${eyeY - 4} L${cx + eyeDx - 3},${eyeY} L${cx + eyeDx + 5},${eyeY + 4}" stroke="#1f2937" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M${cx + eyeDx + 7},${eyeY - 13} L${cx + eyeDx - 6},${eyeY - 8}" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round"/></g>
+        <path class="pt-brow-RE" d="M${cx - eyeDx - 6},${eyeY - 10} q6,-4 12,0" stroke="${V.hair === 'bald' || V.hair === 'bun' ? '#9ca3af' : hairD}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path class="pt-brow-LE" d="M${cx + eyeDx - 6},${eyeY - 10} q6,-4 12,0" stroke="${V.hair === 'bald' || V.hair === 'bun' ? '#9ca3af' : hairD}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
         <path d="M${cx},${eyeY + 6} q-3,7 1,9" stroke="${skinD}" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M${cx - 9},${hy + ry * 0.48} q9,7 18,0" stroke="#9f4a3c" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+        <path class="pt-mouth" d="M${cx - 9},${hy + ry * 0.48} q9,7 18,0" stroke="#9f4a3c" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path class="pt-mouth-pain" d="M${cx - 9},${hy + ry * 0.48 + 3} l4.5,-3 l4.5,3 l4.5,-3 l4.5,3" stroke="#9f4a3c" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
       if (kid) face += `<circle cx="${cx - eyeDx - 5}" cy="${eyeY + 12}" r="5" fill="#f87171" opacity=".22"/><circle cx="${cx + eyeDx + 5}" cy="${eyeY + 12}" r="5" fill="#f87171" opacity=".22"/>`;
       if (ex.includes('wrinkle')) face += `<path d="M${cx - 12},${hy - ry * 0.52} q12,-3 24,0 M${cx - 9},${hy - ry * 0.4} q9,-2 18,0" stroke="${skinD}" stroke-width="1.4" fill="none" stroke-linecap="round"/>
                                          <path d="M${cx - 15},${hy + ry * 0.36} q-3,5 -1,9 M${cx + 15},${hy + ry * 0.36} q3,5 1,9" stroke="${skinD}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
@@ -3640,8 +3667,13 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       const rd = document.getElementById('responseDisplay'), toneOn = rd && rd.textContent.trim() === '🔊';
       const gT = st.querySelector('.pt-glow-' + te), gN = st.querySelector('.pt-glow-' + nte);
       gT.setAttribute('fill', '#4ade80'); gN.setAttribute('fill', '#fb923c');
-      gT.classList.toggle('on', !!toneOn);
+      gT.classList.toggle('on', !!toneOn || isPresenting());   // 제시 버튼을 누르고 있는 동안 계속 켜짐 (반응이 떠도 유지)
       gN.classList.toggle('on', !!state.isMaskingOn);
+      // 불쾌 수준(UCL, 약 100 dB HL) 이상이 제시되는 동안 해당 귀 쪽 눈을 찡그림: 톤 → 검사귀, 차폐음 → 비검사귀
+      const UCL = 100;
+      const painTE = (isPresenting() || !!toneOn) && state.signalLevel >= UCL;   // 제시 버튼을 누르고 있는 동안 계속
+      const painNTE = !!state.isMaskingOn && state.emLevel >= UCL;
+      ['RE', 'LE'].forEach(e => st.classList.toggle('pain-' + e, (e === te && painTE) || (e === nte && painNTE)));
     }
     let ptRaiseTimer = null;
     (function initPatient() {
