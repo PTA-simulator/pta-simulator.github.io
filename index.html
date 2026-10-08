@@ -632,11 +632,11 @@
     .am-head-r { flex:none; flex-direction:column; align-items:flex-end; gap:4px; flex-wrap:nowrap; }   /* VOL 위 · LED 아래로 쌓아 피검자 칸을 넓게 */
     .am-head-r .am-leds { gap:10px; }
     .pt-chart { position:relative; flex:1 1 auto; min-width:0; background:#fff; border:1px solid #dbe3ec; border-radius:10px; padding:5px 10px; box-shadow:0 1px 2px rgba(15,23,42,.05); color:#1f2937; font-size:11.5px; line-height:1.35; }
-    .pt-chart { display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-rows:auto auto; column-gap:9px; row-gap:2px; align-items:center; }
-    .pt-chart .pc-tag { grid-row:1 / 3; grid-column:1; align-self:center; }
-    .pt-chart .pc-r1 { grid-row:1; grid-column:2; }
-    .pt-chart .pc-r2 { grid-row:2; grid-column:2; }
-    .pt-chart .pc-plan { grid-row:1 / 3; grid-column:3; align-self:center; }
+    .pt-chart { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:auto auto; column-gap:9px; row-gap:2px; align-items:center; }
+    .pt-chart .pc-tag { display:none; }   /* 나이·성별은 피검자 그림으로 알 수 있으므로 숨기고 상담·병력 자리를 넓힘 */
+    .pt-chart .pc-r1 { grid-row:1; grid-column:1; }
+    .pt-chart .pc-r2 { grid-row:2; grid-column:1; }
+    .pt-chart .pc-plan { grid-row:1 / 3; grid-column:2; align-self:center; }
     .pc-tag { flex:none; font-size:11px; font-weight:800; color:#075985; background:#e0f2fe; border-radius:999px; padding:1px 8px; }
     .pc-txt { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f2937; }
     .pc-txt em { font-style:normal; font-weight:800; color:#64748b; margin-right:5px; }
@@ -652,6 +652,9 @@
     .pc-plan li b { color:#0f172a; }
     .pc-plan li.pc-ear { background:#eef2ff; border-color:#c7d2fe; }
     .pc-plan li.pc-me, .pc-plan li.pc-mask { background:#fffbeb; border-color:#fde68a; }
+    .pc-plan li.pc-ent { background:#fff1f2; border-color:#fecdd3; }
+    .pc-plan li.pc-ent b { color:#be123c; }
+    .pc-plan li.pc-oto { background:#ecfdf5; border-color:#a7f3d0; }
     .pc-plan li.pc-dead { background:#fef2f2; border-color:#fecaca; }
     /* 펼치면 아래 피검자 그림 칸 크기 그대로 그 위에 덮어서 크게 표시 (그림 칸이 안 보이는 화면에서는 기존처럼 카드 아래) */
     .pc-plan ul.on-stage { right:auto; flex-direction:column; flex-wrap:nowrap; justify-content:flex-start; gap:6px; padding:12px 14px; overflow:visible;
@@ -1354,7 +1357,7 @@
       cond_uni: ['cond_uni'], cond_bi: ['cond_bi'], mixed: ['mixed'], mixed_bi: ['mixed_bi'],
       dead: ['dead'], nr: ['dead', 'dead', 'severe'], dilemma: ['cond_bi', 'cond_bi', 'mixed_bi', 'cond_uni']
     };
-    const COMPLAINTS = ['잘 안 들려서 왔어요', '귀에서 소리가 나고 잘 안 들려요', '대화를 자꾸 못 알아들어요', '귀가 먹먹하고 잘 안 들려요', '정밀 청력검사 의뢰로 왔어요'];
+    const COMPLAINTS = ['잘 안 들려요', '이명이 있고 잘 안 들려요', '대화를 자주 놓쳐요', '귀가 먹먹하고 안 들려요', '정밀검사 의뢰로 왔어요'];
 
     function genScenario(sc) {
       const side = RC.pick(['RE', 'LE']), other = side === 'RE' ? 'LE' : 'RE';
@@ -1372,24 +1375,24 @@
         set(side, rcEar(rcShape(t, rcMagnitude(t, sc === 'severe')), rcZero()), t, SN);
         set(other, rcNormal(), 'normal', 'normal');
         kind = `편측성 ${SHAPE_NAME[t]} 감각신경성 난청 (${sideKo})${sc === 'severe' ? ' - 고도' : ''}`;
-        hint = `${sideKo} 귀 ${RC.pick(['이명과 청력 저하', '이충만감과 청력 저하', '수개월 전부터 청력 저하'])}, 반대쪽은 불편 없음.`;
+        hint = `${sideKo} ${RC.pick(['이명·청력 저하', '먹먹함·청력 저하', '수개월째 청력 저하'])}, 반대쪽 정상`;
       } else if (sc === 'bi_sym' || sc === 'bi_asym') {
         const t = RC.pick(['gentle', 'ski', 'ski', 'flat', 'cookie', 'rising', 'notch']);
         const M = rcMagnitude(t, false);
         set(side, rcEar(rcShape(t, M), rcZero()), t, SN);
         set(other, rcEar(rcShape(t, sc === 'bi_asym' ? Math.min(95, M + RC.R(3, 5) * 5) : M), rcZero()), t, SN);
         kind = `양측성 ${sc === 'bi_sym' ? '대칭' : '비대칭'} ${SHAPE_NAME[t]} 감각신경성 난청`;
-        hint = `양쪽 귀 ${RC.pick(['청력 저하와 이명', '청력 저하(서서히 진행)', '청력 저하 및 대화 시 어려움'])}${sc === 'bi_asym' ? `, ${sideKo}이 더 불편` : ''}.`;
+        hint = `양이 ${RC.pick(['청력 저하·이명', '청력 서서히 저하', '청력 저하·대화 어려움'])}${sc === 'bi_asym' ? `, ${sideKo} 더 불편` : ''}`;
       } else if (sc === 'cond_bi') {
         set(side, rcEar(rcShape('normal'), rcAbg(25, 45)), 'flat', 'conductive');
         set(other, rcEar(rcShape('normal'), rcAbg(25, 45)), 'flat', 'conductive');
         kind = '양측성 전음성 난청 (Bilateral Conductive)';
-        hint = `${RC.pick(['양쪽 귀 삼출성 중이염 병력이 있습니다', '양쪽 귀 중이염이 반복됩니다', '양쪽 귀 이관기능 장애가 있습니다'])}.`;
+        hint = RC.pick(['양이 삼출성 중이염 병력', '양이 중이염 반복', '양이 이관기능 장애', '양이 고막 함몰·삼출액 의심']);
       } else if (sc === 'cond_uni') {
         set(side, rcEar(rcShape('normal'), rcAbg(25, 50)), 'flat', 'conductive');
         set(other, rcNormal(), 'normal', 'normal');
         kind = `편측성 전음성 난청 (${sideKo})`;
-        hint = `${sideKo} 귀 ${RC.pick(['중이염 후 청력 저하', '고막 천공 병력', '이소골 연쇄 이상이 의심'])}.`;
+        hint = `${sideKo} ${RC.pick(['중이염 후 청력 저하', '고막 천공 병력', '이소골 이상 의심', '귀지가 심하고 먹먹함', '고막 함몰·중이염 반복', '외이도 이물감·먹먹함'])}`;
       } else if (sc === 'mixed') {
         const t = RC.pick(['gentle', 'flat', 'rising', 'cookie']);
         const M = Math.min(rcMagnitude(t, false), 60);
@@ -1397,20 +1400,20 @@
         if (Math.random() < 0.5) set(other, rcNormal(), 'normal', 'normal');
         else set(other, rcEar(rcShape(t, Math.max(25, M - 15)), rcZero()), t, SN);
         kind = `편측성 혼합성 난청 (${sideKo}) - ${SHAPE_NAME[t]}`;
-        hint = `${sideKo} 귀 ${RC.pick(age >= 50 ? ['만성 중이염 병력과 노화', '이경화증 의심', '외상 후 청력 저하'] : ['만성 중이염 병력', '이경화증 의심', '외상 후 청력 저하'])}.`;
+        hint = `${sideKo} ${RC.pick(age >= 50 ? ['만성 중이염·노화', '이경화증 의심', '외상 후 청력 저하'] : ['만성 중이염 병력', '이경화증 의심', '외상 후 청력 저하'])}`;
       } else if (sc === 'mixed_bi') {   // 양측성 혼합성: 양쪽 모두 감각신경성(BC 저하) + 전음성(ABG) 요소
         const t = RC.pick(['gentle', 'flat', 'flat', 'cookie']);
         const M = RC.R(6, 10) * 5;
         set(side, rcEar(rcShape(t, M), rcAbg(20, 35)), t, 'mixed');
         set(other, rcEar(rcShape(t, Math.max(30, M + RC.R(-2, 2) * 5)), rcAbg(20, 35)), t, 'mixed');
         kind = `양측성 혼합성 난청 - ${SHAPE_NAME[t]}`;
-        hint = `${RC.pick(age >= 50 ? ['양쪽 귀 만성 중이염 병력과 노화', '양쪽 귀 중이염 후 청력 저하가 서서히 진행', '양쪽 귀 이경화증 의심'] : ['양쪽 귀 만성 중이염 병력', '양쪽 귀 중이염 후 청력 저하가 서서히 진행', '양쪽 귀 이경화증 의심'])}.`;
+        hint = RC.pick(age >= 50 ? ['양이 만성 중이염·노화', '양이 중이염 후 점점 저하', '양이 이경화증 의심'] : ['양이 만성 중이염 병력', '양이 중이염 후 점점 저하', '양이 이경화증 의심']);
       } else {   // dead
         set(side, rcDead(), 'corner', SN);
         if (Math.random() < 0.6) set(other, rcNormal(), 'normal', 'normal');
         else set(other, rcEar(rcShape('gentle', RC.R(4, 8) * 5), rcZero()), 'gentle', SN);
         kind = `편측성 심도 감각신경성 난청 - 코너형 (${sideKo})`;
-        hint = `${sideKo} 귀 ${RC.pick(['돌발성 난청 후 청력이 거의 없음', '이전 수술·외상 후 청력 소실', '오래전부터 한쪽 청력이 거의 없음'])}.`;
+        hint = `${sideKo} ${RC.pick(['돌발성 난청 후 청력 거의 없음', '수술·외상 후 청력 소실', '오래전부터 청력 거의 없음'])}`;
       }
       return { sc, kind, hint, who, complaint: RC.pick(COMPLAINTS), T, cfg, typ };
     }
@@ -3541,17 +3544,24 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
     // 피검자 정보 카드: 나이·성별 · 주소 · 병력 + 병력에서 읽어낼 '검사 전 체크' (난청 유형·정도·형태 정답은 숨김)
     function ptChecks(c) {
       const h = c.hint || '', who = c.who || '', out = [];
-      const sideM = h.match(/(우측|좌측) 귀/), moreM = h.match(/(우측|좌측)이 더 불편/);
+      const sideM = h.match(/^(우측|좌측) /), moreM = h.match(/(우측|좌측) 더 불편/);
       const bad = sideM ? sideM[1] : moreM ? moreM[1] : null;
+      out.push(['oto', '검사 전 <b>이경검사 반드시 실시</b> — 외이도(귀지·이물)·고막 상태 확인']);
       if (bad) out.push(['ear', `호소가 덜한 <b>${bad === '우측' ? '좌측' : '우측'}</b> 귀부터 기도 검사`]);
       else out.push(['ear', '어느 쪽이 더 잘 들리는지 묻고, <b>좋은 귀부터</b> 기도 검사']);
-      out.push(['seq', '1k → 2k → 4k → 8k → <b>1k 재검</b> → 500 → 250']);
       if (/중이염|고막|이소골|이관|이경화|삼출/.test(h)) out.push(['me', !sideM ? '양측 중이 병력 → ABG·<b>차폐 딜레마</b> 대비 (Insert 고려)' : '중이 병력 → <b>ABG</b> 확인, 골도·골도 차폐 계획']);
+      if (/귀지/.test(h)) out.push(['oto', '귀지 → 이경검사로 막힘 확인, 가능하면 <b>제거 후 검사</b> (막힌 채면 ABG가 생길 수 있음)']);
+      if (/고막/.test(h)) out.push(['oto', '고막 이상 → 이경검사 + <b>고막운동도(Tympanometry)</b>로 중이 상태 확인']);
+      // 이비인후과 방문을 권유해야 하는 경우
+      if (/귀지/.test(h)) out.push(['ent', '귀지가 꽉 막혀 제거가 어렵거나 통증이 있으면 → <b>이비인후과 방문 권유</b>']);
+      if (/이물/.test(h)) out.push(['ent', '외이도 이물 의심 → 직접 빼지 말고 <b>이비인후과 방문 권유</b>, 이물 제거 후 검사']);
+      if (/천공/.test(h)) out.push(['ent', '고막 천공 → 진물·통증·출혈이 있으면 검사 전 <b>이비인후과 진료 권유</b>']);
+      if (/외상/.test(h)) out.push(['ent', '외상 병력 → 고막·이소골 손상 가능, <b>이비인후과 진료 권유</b>']);
+      if (/돌발성/.test(h)) out.push(['ent', '돌발성 난청 → 최근 발생이면 응급 치료 대상, 즉시 <b>이비인후과 방문 권유</b>']);
       if (/거의 없음|소실/.test(h)) out.push(['dead', '한쪽이 거의 안 들림 → <b>교차청취(음영곡선)</b> 주의, 차폐 필수']);
       if (/외상/.test(h)) out.push(['me', '외상 병력 → 전음성·감각신경성 요소 모두 염두']);
-      if (/이명/.test(h + (c.complaint || ''))) out.push(['tin', '이명 → 순음과 혼동 가능, <b>짧게·펄스로</b> 제시']);
       if (/세/.test(who)) out.push(['kid', '아동 → 지시를 쉽게, 반응 방법 연습 후 시작']);
-      else if ((parseInt(who, 10) || 0) >= 60) out.push(['old', '고령 → 반응 지연·지시 이해 확인, 고주파 하강 가능']);
+      else if ((parseInt(who, 10) || 0) >= 60) out.push(['old', '고령 → 검사 방법 이해 확인, 반응이 늦을 수 있어 <b>잠시 기다리기</b>']);
       if (c.isMask) out.push(['mask', '차폐 문제 → 비차폐는 기입됨, <b>차폐 필요 주파수</b>부터 계산']);
       return out;
     }
