@@ -135,6 +135,18 @@
       box-shadow: inset 0 3px 8px rgba(0,0,0,.95), 0 1px 0 #fff; }
     .lcd span { font:800 28px ui-monospace,Menlo,Consolas,monospace; color:#8dff7a; text-shadow:0 0 8px rgba(141,255,122,.65); min-width:3ch; text-align:right; }
     .lcd small { font-size:10px; color:#4e9a49; letter-spacing:.08em; }
+    /* 검사 중 과차폐 주의 표시 */
+    .risk-opt { display:block; margin:0 0 12px; padding:9px 11px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; font-size:12.5px; font-weight:700; color:#334155; cursor:pointer; }
+    .risk-opt input { margin-right:6px; vertical-align:-2px; }
+    .risk-opt span { display:block; margin-top:4px; font-size:11px; font-weight:500; color:#64748b; }
+    .risk-badge { display:none; position:absolute; left:50%; top:100%; transform:translate(-50%, 3px); z-index:5; white-space:nowrap; font-style:normal; font-size:10.5px; font-weight:800;
+      line-height:1; padding:3px 7px; border-radius:999px; box-shadow:0 2px 6px rgba(15,23,42,.25); pointer-events:none; letter-spacing:0; text-shadow:none; }
+    .risk-badge.over { display:block; background:#dc2626; color:#fff; }
+    .risk-badge.under { display:block; background:#2563eb; color:#fff; }
+    html.phone-mode .mk-read .risk-badge { top:auto; bottom:100%; transform:translate(-50%, -3px); font-size:10px; }
+    .mini-side .ms-val em.risk-badge { color:#fff; }
+    .mini-side .risk-badge { position:absolute; left:3px; right:3px; top:auto; bottom:3px; transform:none; font-size:9.5px; padding:2px 0; text-align:center; letter-spacing:-.03em; box-shadow:none; }
+    .mini-side .ms-val:has(.risk-badge.over) span, .mini-side .ms-val:has(.risk-badge.under) span { visibility:hidden; }
     .lcd.amber { background:#140e04; } .lcd.amber span { color:#ffc247; text-shadow:0 0 8px rgba(255,194,71,.6); } .lcd.amber small { color:#9a7430; }
     .lcd.blue { background:#06121a; } .lcd.blue span { color:#7dd3fc; text-shadow:0 0 8px rgba(125,211,252,.6); } .lcd.blue small { color:#3b7a9a; }
 
@@ -1019,7 +1031,7 @@
             <div class="am-label">NB Noise · Masking Level (NTE)</div>
             <div class="hl-body">
               <div class="hl-side">
-                <div class="lcd amber"><span id="maskingVal">-10</span><small>dB EM</small></div>
+                <div class="lcd amber" style="position:relative;"><span id="maskingVal">-10</span><small>dB EM</small><em class="risk-badge" id="riskBadge"></em></div>
                 <button onclick="adjMasking(+5)" class="key">▲ +5<small class="step-unit">dB</small></button>
                 <button onclick="adjMasking(-5)" class="key">▼ −5<small class="step-unit">dB</small></button>
               </div>
@@ -1314,7 +1326,7 @@
       <!-- 차폐 범위표 / 난청 진단 (탭) -->
       <div class="card wk-card">
         <!-- 폰 기입표 화면: 위에 작은 청력도(읽기 전용)를 고정해 보면서 기입 -->
-        <div id="miniAg" class="mini-ag" aria-label="청력도 미리보기"><div class="mini-side tone"><div class="ms-val"><em>톤</em><b id="miniToneV">40</b><span>dB HL</span></div><button type="button" class="ms-dilbtn" id="miniDil" onmousedown="event.preventDefault()" onclick="miniDilToggle()" title="지금 선택된 칸(진하게 표시된 칸)을 차폐불가로 표시 / 해제"><i></i><span>차폐불가</span></button></div><svg id="miniAgSvg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet"></svg><div class="mini-side mask" id="miniMaskSide"><div class="ms-val"><em>노이즈</em><b id="miniNoiseV">-10</b><span id="miniNoiseU">dB EM</span></div><button class="ms-rec" id="miniRec" onclick="miniRecMasked()" title="지금 톤 레벨을 차폐 역치 기호로 기록"><i id="miniRecSym">△</i><span>차폐역치<br>기록</span></button></div></div>
+        <div id="miniAg" class="mini-ag" aria-label="청력도 미리보기"><div class="mini-side tone"><div class="ms-val"><em>톤</em><b id="miniToneV">40</b><span>dB HL</span></div><button type="button" class="ms-dilbtn" id="miniDil" onmousedown="event.preventDefault()" onclick="miniDilToggle()" title="지금 선택된 칸(진하게 표시된 칸)을 차폐불가로 표시 / 해제"><i></i><span>차폐불가</span></button></div><svg id="miniAgSvg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet"></svg><div class="mini-side mask" id="miniMaskSide"><div class="ms-val"><em>노이즈</em><b id="miniNoiseV">-10</b><span id="miniNoiseU">dB EM</span><em class="risk-badge" id="riskBadgeS"></em></div><button class="ms-rec" id="miniRec" onclick="miniRecMasked()" title="지금 톤 레벨을 차폐 역치 기호로 기록"><i id="miniRecSym">△</i><span>차폐역치<br>기록</span></button></div></div>
         <div class="wk-tabs">
           <div class="wk-seg" role="tablist">
           <button id="wkTab-mask" class="wk-tab active" onclick="setWorkTab('mask')"><span class="lbl-l">① 차폐 범위</span><span class="lbl-s">① 차폐범위</span></button>
@@ -1359,6 +1371,8 @@
         <div id="spPane-answer" class="sp-pane hidden"><div id="trueAnswerBox"><div id="trueAnswerText"></div></div></div>
         <div id="spPane-guide" class="sp-pane hidden">
         <div class="sp-guide">
+          <label class="risk-opt"><input type="checkbox" id="riskOpt" onchange="setRiskOpt(this.checked)"> 검사 중 <b style="color:#dc2626;">과차폐 주의</b> 표시
+            <span>차폐음 − 제시음 ≥ IA (Supra 40 · Insert 55)이면 표시</span></label>
           <h4>기입 순서</h4>
           <ol>
             <li>양 귀 <b>비차폐 기도</b>(O·X) → <b>비차폐 골도</b>(&lt; &gt;, 좋은 쪽 귀 값)</li>
@@ -1442,8 +1456,10 @@
     }
     // 해당 귀에서 사이주파수 f 의 양옆 옥타브 AC 역치 차이 (NR은 120으로 계산)
     function interGap(T, ear, f) {
-      const [lo, hi] = INTER_NEIGHBORS[f];
-      return Math.abs(Math.min(T[ear].AC[lo], 120) - Math.min(T[ear].AC[hi], 120));
+      // 학생이 실제로 보는 '비차폐 기도역치'(교차청취 포함)로 판단 — 참역치는 차폐 후에야 알 수 있고, 사이주파수는 차폐하지 않으므로
+      const [lo, hi] = INTER_NEIGHBORS[f], other = ear === 'RE' ? 'LE' : 'RE';
+      const uAC = fr => { const cross = (acOnly(fr) ? T[other].AC[fr] : T[other].BC[fr]); const v = Math.min(T[ear].AC[fr], cross == null ? 999 : cross + getIA()); return Math.min(v, 120, AC_MAX[fr]); };
+      return Math.abs(uAC(lo) - uAC(hi));
     }
     // 차폐 문제는 차폐만 연습 → 사이주파수는 아예 다루지 않음(미리 기입·정답지·주파수 이동 모두 제외)
     const isMaskCase = () => !!(typeof CASES !== 'undefined' && CASES[state.currentCase] && CASES[state.currentCase].isMask);
@@ -2385,6 +2401,8 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       res.trueW = (lo === null || lo > hi) ? -1 : hi - res.trueLo;
       res.keyKind = winW < 10 ? 'dilemma' : res.formulaDilemma ? 'dilemma_soft' : winW < 15 ? 'small' : 'ok';   // 정답지 표시용(기존 절차 기준)
       res.kind = res.trueW < 10 ? 'dilemma' : res.formulaDilemma ? 'dilemma_soft' : winW < 15 ? 'small' : 'ok';
+      // 보이는 공식상 딜레마인데 결과가 NR(최대 출력에서 무반응)이면: 과차폐 가능성이 있는 상태의 '못 들음'은 믿을 수 없으므로 차폐불가만 정답
+      if (res.kind === 'dilemma_soft' && truth.nr) { res.kind = 'dilemma'; res.keyKind = 'dilemma'; }
       res.dilemma = res.kind === 'dilemma';                                        // 확정 딜레마(plateau 불가)
       res.dilemmaAny = res.kind === 'dilemma' || res.kind === 'dilemma_soft';      // 딜레마 성격(채점 제외·D 인정)
       res.answers = plateauAnswers(res, bone, freq);                                // 실제 검사 절차로 나오는 정답 범위(최대 4개)
@@ -2677,6 +2695,24 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       if (e) e.textContent = state.phone === 'insert' ? 'Insert 55' : 'Supra 40';
     }
 
+    // ===== 검사 중 과차폐 주의 표시 (노브 두 개만 비교) =====
+    //  과차폐 주의 — 차폐음 − 제시음 ≥ IA (기도·골도 같음)
+    let riskOn = true; try { riskOn = localStorage.getItem('pta-risk') !== '0'; } catch (e) {}
+    function setRiskOpt(on) { riskOn = !!on; try { localStorage.setItem('pta-risk', on ? '1' : '0'); } catch (e) {} syncRisk(); }
+    function maskRiskKind() {
+      if (!riskOn || state.nrMask) return '';   // 노이즈 ON/OFF와 무관하게 노브 값으로 판단
+      const bone = isBone(), f = state.currentFreq;
+      if (bone && !boneOK(f)) return '';
+      const m = computeMasking(state.targetEar, f, bone ? 'bone' : 'air');
+      const em = state.emLevel, sig = state.signalLevel;
+      if (em - sig >= m.IA) return 'over';   // 수업 기준: 노브 두 개(차폐음 − 제시음) 차이가 IA(Supra 40 · Insert 55) 이상이면 과차폐
+      return '';
+    }
+    function syncRisk() {
+      const k = maskRiskKind(), txt = k === 'over' ? '⚠ 과차폐 주의' : '';
+      ['riskBadge', 'riskBadgeM', 'riskBadgeS'].forEach(id => { const b = document.getElementById(id); if (!b) return; b.className = 'risk-badge' + (k ? ' ' + k : ''); b.textContent = id === 'riskBadgeS' ? txt.replace('⚠ ', '') : txt; });
+      const o = document.getElementById('riskOpt'); if (o) o.checked = riskOn;
+    }
     function updateUI() {
       syncIAHint();
       clampSignal();
@@ -2685,6 +2721,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       if (state.emLevel < maskMax(state.currentFreq)) state.nrMask = false;
       document.getElementById('signalVal').innerText = state.nrTone ? 'NR' : state.signalLevel;
       document.getElementById('maskingVal').innerText = state.nrMask ? 'NR' : state.emLevel;
+      try { syncRisk(); } catch (e) {}
 
       document.getElementById('signalIndicator').style.transform = `rotate(${((state.signalLevel-LEVEL_MIN)/LEVEL_RANGE)*270 - 135}deg)`;
       document.getElementById('maskingIndicator').style.transform = `rotate(${((state.emLevel-LEVEL_MIN)/LEVEL_RANGE)*270 - 135}deg)`;
@@ -2972,7 +3009,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         const mt = MSYM[x.symbol];
         if (!mt || reqKeys.has(x.symbol + x.freq) || !freqsList.includes(x.freq)) return;
         const [te, mode, mark] = mt, m = computeMasking(te, x.freq, mode);
-        if (m.needed && m.dilemmaAny) return;
+        if (m.needed && m.kind === 'dilemma') return;   // 진짜 차폐불가만 제외. '차폐불가 또는 범위' 칸은 기호를 찍었으면 값이 맞아야 함(안 찍어도 감점 없음)
         const exp = mode === 'air' ? expAC(te, x.freq, true) : expBCMask(te, x.freq);
         if (x.db === exp.db && !!x.nr === exp.nr) return;
         S.mSym.total++;
@@ -3149,9 +3186,14 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
           if (mode === 'bone' && f === 8000) return '<td style="background:#8a9099;"></td>';
           const m = computeMasking(te, f, mode);
           if (!m.needed) return '<td style="color:#cbd5e1;">-</td>';
-          if (m.keyKind === 'dilemma') return '<td style="background-color:#fee2e2; color:#991b1b; font-weight:800;">차폐<br>불가</td>';
-          const soft = m.keyKind === 'dilemma_soft';
           const ex = mode === 'air' ? expAC(te, f, true) : expBCMask(te, f);
+          if (m.kind === 'dilemma') return '<td style="background-color:#fee2e2; color:#991b1b; font-weight:800;">차폐<br>불가</td>';
+          // 절차(교재 IML 시작)로는 차폐불가로 끝나지만 실제 plateau가 있는 칸: 채점과 같게 두 답을 함께 표시
+          if (m.keyKind === 'dilemma' && !ex.nr && m.trueLo != null && m.winHi >= m.trueLo)
+            return `<td style="background-color:#fef9c3; font-weight:700; line-height:1.35;">${m.kind === 'dilemma_soft' ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.trueLo}~${m.winHi}</td>`;
+          if (false)
+            return `<td style="background-color:#fef9c3; font-weight:700; line-height:1.35;"><span style="color:#854d0e;">차폐불가</span> 또는<br>${m.trueLo}~${m.winHi}</td>`;
+          const soft = m.kind === 'dilemma_soft';   // 채점에서 차폐불가도 인정하는 칸만 '차폐불가 또는' 표시
           if (ex.nr) return `<td style="background-color:#fef9c3; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}<br>${m.winLo + 5}</td>`;
           if (m.answers && m.answers.length) return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.35;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.answers.map(x => rangeText(x.a, x.b)).join('<br>')}</td>`;
           return `<td style="background-color:${'#fef9c3'}; font-weight:700; line-height:1.3;">${soft ? '<span style="color:#854d0e;">차폐불가</span> 또는<br>' : ''}${m.winLo}~${m.maxEM > m.winHi ? m.winHi + '↑' : m.winHi}${m.keyKind === 'small' ? '<br><span style="font-size:9px; font-weight:600; color:#92400e;">small</span>' : ''}</td>`;
@@ -3327,10 +3369,10 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
       ['RE', 'LE'].forEach(te => freqsList.forEach(f => {
         const color = te === 'RE' ? RED : BLUE;
         const ma = computeMasking(te, f, 'air');
-        if (ma.needed && !ma.dilemmaAny) items.push({ f, kind: 'acM', ear: te, sym: te === 'RE' ? 'TRIANGLE' : 'SQUARE', color, e: expAC(te, f, true) });
+        if (ma.needed && ma.kind !== 'dilemma') items.push({ f, kind: 'acM', ear: te, sym: te === 'RE' ? 'TRIANGLE' : 'SQUARE', color, e: expAC(te, f, true) });
         if (boneOK(f)) {
           const mb = computeMasking(te, f, 'bone');
-          if (mb.needed && !mb.dilemmaAny) items.push({ f, kind: 'bcM', ear: te, sym: te === 'RE' ? 'BC_MASKED_R' : 'BC_MASKED_L', color, e: expBCMask(te, f) });
+          if (mb.needed && mb.kind !== 'dilemma') items.push({ f, kind: 'bcM', ear: te, sym: te === 'RE' ? 'BC_MASKED_R' : 'BC_MASKED_L', color, e: expBCMask(te, f) });
         }
       }));
       // 기도 역치 연결선: 차폐 후 값이 있으면 우선, 없으면 비차폐 값
@@ -3596,7 +3638,7 @@ const res = { te, nte, freq, IA, teAC, teBC, nteAC, nteBC, teUAC, teUBC, nteUAC,
         </div>
         <div class="mk-ctl mask" id="mmMaskGrp">
           <button class="mk-step" onclick="adjMasking(-5)" aria-label="차폐음 5 dB 낮게">−</button>
-          <div class="mk-read"><b id="mmMask">-10</b><span>dB EM</span></div>
+          <div class="mk-read" style="position:relative;"><b id="mmMask">-10</b><span>dB EM</span><em class="risk-badge" id="riskBadgeM"></em></div>
           <button class="mk-step" onclick="adjMasking(+5)" aria-label="차폐음 5 dB 높게">+</button>
           <button class="mk-sw" id="mmMaskOn" onclick="toggleMasking()" aria-label="차폐 켜기/끄기"><span>차폐</span><b id="mmMaskOnTxt">OFF</b></button>
         </div>
